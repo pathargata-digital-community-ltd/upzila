@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>উপজেলা সোশ্যাল অ্যাপ</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- Header Section -->
+    <header>
+        <div class="header-left">
+            <i class="fas fa-bars" onclick="toggleMenu()"></i>
+            <h1 class="app-logo">UpazilaConnect</h1>
+        </div>
+        <div class="header-right">
+            <i class="fas fa-search"></i>
+            <div class="notif-icon">
+                <i class="fas fa-bell"></i>
+                <span class="badge">৩</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Side Menu (Hamburger) -->
+    <div id="side-menu" class="side-menu">
+        <div class="menu-header">সেটিংস ও গোপনীয়তা</div>
+        <a href="#"><i class="fas fa-cog"></i> সেটিংস</a>
+        <a href="#"><i class="fas fa-user-shield"></i> প্রাইভেসি</a>
+        <a href="#"><i class="fas fa-question-circle"></i> সাহায্য</a>
+        <a href="#" style="color: red;"><i class="fas fa-sign-out-alt"></i> লগ আউট</a>
+    </div>
+
+    <!-- Main Dynamic Content -->
+    <main id="app-content">
+        <!-- JavaScript এর মাধ্যমে এখানে কন্টেন্ট লোড হবে -->
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+        <button class="nav-item active" onclick="loadModule('home', this)">
+            <i class="fas fa-home"></i><span>হোম</span>
+        </button>
+        <button class="nav-item" onclick="loadModule('service', this)">
+            <i class="fas fa-th-large"></i><span>সার্ভিস</span>
+        </button>
+        <button class="nav-item" onclick="loadModule('message', this)">
+            <i class="fas fa-comment-dots"></i><span>মেসেজ</span>
+        </button>
+        <button class="nav-item" onclick="loadModule('users', this)">
+            <i class="fas fa-users"></i><span>মানুষ</span>
+        </button>
+        <button class="nav-item" onclick="loadModule('profile', this)">
+            <i class="fas fa-user-circle"></i><span>প্রোফাইল</span>
+        </button>
+    </nav>
+
+    <script type="module" src="app.js"></script>
+    <script>
+        function toggleMenu() {
+            const menu = document.getElementById('side-menu');
+            menu.classList.toggle('active');
+        }
+    </script>
+</body>
+</html>
