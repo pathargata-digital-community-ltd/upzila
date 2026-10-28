@@ -1334,15 +1334,7 @@
     import { getDatabase, ref, push, set, onValue, get, update, remove, query, orderByKey, limitToFirst, limitToLast, startAfter, endBefore, orderByChild, equalTo, runTransaction, endAt } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-    // --- MAIN CLOUDINARY API CONSTANTS (For Posts & Profiles) ---
-    const CLOUDINARY_CLOUD_NAME = "dl1auoanl"; 
-    const CLOUDINARY_API_KEY = "YOUR_API_KEY"; // মেইন Cloudinary API Key
-    const CLOUDINARY_API_SECRET = "YOUR_API_SECRET"; // মেইন Cloudinary API Secret
-
-    // --- STORY CLOUDINARY API CONSTANTS (For 24H Stories Only) ---
-    const STORY_CLOUDINARY_CLOUD_NAME = "dixazfmlr"; 
-    const STORY_CLOUDINARY_API_KEY = "";
-    const STORY_CLOUDINARY_API_SECRET = "";
+    // Cloudinary media deletion must run on a trusted server; never place API secrets in this public browser app.
     const firebaseConfig = {
         apiKey: "AIzaSyBfI-THOXOvhyL7LumZVKixtTVwF94CjsI",
         authDomain: "pathargata-digital-comnity-ltd.firebasestorage.app",
@@ -1408,7 +1400,7 @@
         }
     }
 
-    // --- PERMANENT DELETION (CLOUDINARY LOGIC) ---
+    // --- PERMANENT DELETION (SERVER-SIDE ONLY) ---
     window.extractPublicIdFromCloudinaryUrl = (url) => {
         if(!url || !url.includes('cloudinary.com')) return null;
         const matches = url.match(/\/upload\/(?:v\d+\/)?([^\.]+)/);
@@ -1417,40 +1409,13 @@
 
     window.deleteFromCloudinary = async (url, resourceType = 'image', isStory = false) => {
         const publicId = extractPublicIdFromCloudinaryUrl(url);
-        if(!publicId) return;
-
-        // চেক করা হচ্ছে এটি স্টোরির ছবি/ভিডিও কি না। সেই অনুযায়ী API Key সিলেক্ট হবে।
-        const cloudName = isStory ? STORY_CLOUDINARY_CLOUD_NAME : CLOUDINARY_CLOUD_NAME;
-        const apiKey = isStory ? STORY_CLOUDINARY_API_KEY : CLOUDINARY_API_KEY;
-        const apiSecret = isStory ? STORY_CLOUDINARY_API_SECRET : CLOUDINARY_API_SECRET;
-
-        if(!apiKey || !apiSecret) return;
-
-        // Generate SHA-1 Signature using CryptoJS
-        const timestamp = Math.round((new Date).getTime() / 1000);
-        const stringToSign = `public_id=${publicId}&timestamp=${timestamp}${apiSecret}`;
-        const signature = CryptoJS.SHA1(stringToSign).toString();
-
-        const formData = new URLSearchParams();
-        formData.append('public_id', publicId);
-        formData.append('timestamp', timestamp);
-        formData.append('api_key', apiKey);
-        formData.append('signature', signature);
-
-        try {
-            await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/destroy`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: formData
-            });
-            console.log(`Cloudinary ${resourceType} deleted from ${isStory ? 'STORY' : 'MAIN'} account: ${publicId}`);
-        } catch(e) {
-            console.error("Cloudinary Delete Error: ", e);
-        }
+        if (!publicId) return true;
+        console.error('Cloudinary signed deletion is unavailable in this browser panel:', { publicId, resourceType, isStory });
+        throw new Error('নিরাপদ Cloudinary server endpoint সেটআপ না থাকায় মিডিয়া মুছতে পারিনি। কোনো Firebase record মুছার আগে server-side delete function যোগ করুন।');
     };
 
     window.processAccountDeletion = async (uid, btnElement) => {
-        if(!confirm("আপনি কি নিশ্চিত? ইউজারের সমস্ত ডাটা, পোস্ট এবং ক্লাউডিনারি ফাইল চিরতরে মুছে ফেলা হবে! এই অ্যাকশন আনডু করা যাবে না।")) return;
+        if(!confirm("এই কাজটি স্থায়ী। Cloudinary media delete-এর জন্য secure server endpoint প্রয়োজন; endpoint না থাকলে মিডিয়া থাকা account deletion থেমে যাবে। Firebase account data মুছতে এগোবেন?")) return;
 
         const originalText = btnElement.innerHTML;
         btnElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Deleting...';
@@ -2645,7 +2610,7 @@
     };
 
     window.permanentDeleteTrash = async (id) => {
-        if(!confirm("আপনি কি নিশ্চিত যে পোস্টটি চিরতরে মুছে ফেলতে চান? এতে যুক্ত ছবিও Cloudinary থেকে মুছে যাবে।")) return;
+        if(!confirm("পোস্টটি চিরতরে মুছবেন? Cloudinary media থাকলে secure server delete endpoint না পাওয়া পর্যন্ত deletion ব্যর্থ হবে এবং trash record রাখা হবে.")) return;
         try {
             const snap = await get(ref(db, `trash_bin/${id}`));
             if(snap.exists()) {
@@ -3191,7 +3156,7 @@
 
     // --- NEW: STORY MODERATION FUNCTIONS ---
     window.deleteSingleStory = async (storyId, mediaUrl, mediaType) => {
-        if(!confirm("স্টোরিটি ডিলিট করতে চান? Cloudinary থেকেও ফাইল ডিলিট হবে।")) return;
+        if(!confirm("স্টোরিটি সরাবেন? Cloudinary media থাকলে secure server delete endpoint না থাকা পর্যন্ত কাজটি ব্যর্থ হবে এবং record থাকবে.")) return;
         try {
             if(mediaUrl && mediaUrl !== 'undefined') {
                 // শেষে true পাঠানো হয়েছে, যার মানে এটি স্টোরি ক্লাউডিনারি থেকে ডিলিট হবে
@@ -3207,7 +3172,7 @@
     };
 
     window.clearExpiredStories = async () => {
-        if(!confirm("২৪ ঘণ্টার পুরনো সব স্টোরি ডিলিট করতে চান? Cloudinary থেকেও সব মিডিয়া ফাইল চিরতরে মুছে যাবে!")) return;
+        if(!confirm("২৪ ঘণ্টার পুরনো স্টোরিগুলো সরাবেন? Cloudinary media থাকলে secure server delete endpoint প্রয়োজন; না থাকলে database records মুছবে না.")) return;
         const btn = document.getElementById('btn-clear-stories');
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ডিলিট হচ্ছে...';
         btn.disabled = true;
@@ -3251,7 +3216,7 @@
 
     // --- NEW: STORY MODERATION FUNCTIONS ---
     window.deleteSingleStory = async (storyId, mediaUrl, mediaType) => {
-        if(!confirm("স্টোরিটি ডিলিট করতে চান? Cloudinary থেকেও ফাইল ডিলিট হবে।")) return;
+        if(!confirm("স্টোরিটি সরাবেন? Cloudinary media থাকলে secure server delete endpoint না থাকা পর্যন্ত কাজটি ব্যর্থ হবে এবং record থাকবে.")) return;
         try {
             if(mediaUrl && mediaUrl !== 'undefined') {
                 await deleteFromCloudinary(mediaUrl, (mediaType === 'video' || mediaUrl.includes('.mp4')) ? 'video' : 'image');
@@ -3266,7 +3231,7 @@
     };
 
     window.clearExpiredStories = async () => {
-        if(!confirm("২৪ ঘণ্টার পুরনো সব স্টোরি ডিলিট করতে চান? Cloudinary থেকেও সব মিডিয়া ফাইল চিরতরে মুছে যাবে!")) return;
+        if(!confirm("২৪ ঘণ্টার পুরনো স্টোরিগুলো সরাবেন? Cloudinary media থাকলে secure server delete endpoint প্রয়োজন; না থাকলে database records মুছবে না.")) return;
         const btn = document.getElementById('btn-clear-stories');
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ডিলিট হচ্ছে...';
         btn.disabled = true;
