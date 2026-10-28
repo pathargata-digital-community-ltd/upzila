@@ -776,10 +776,11 @@
 
                 <div class="mt-4 bg-yellow-50 border border-yellow-200 p-3 rounded-lg flex items-center justify-between">
                     <div>
-                        <p class="text-sm font-bold text-yellow-800">REST API Key এবং App ID সেটআপ</p>
-                        <p class="text-[10px] text-gray-500">আপনার OneSignal ড্যাশবোর্ড থেকে এগুলো সংগ্রহ করে নিচে বসান (একবার বসালেই হবে)।</p>
+                        <p class="text-sm font-bold text-yellow-800">OneSignal credential সতর্কতা</p>
+                        <p class="text-[10px] text-gray-600">REST API Key Firebase-এ আর save হবে না। এই browser থেকে পাঠালে key সাময়িকভাবে browser-এ ব্যবহৃত হয়; production-এ server-side function ব্যবহার করুন। পুরোনো saved key পরিষ্কার করে OneSignal থেকে rotate করুন।</p>
                     </div>
                 </div>
+                <button onclick="purgeLegacyOneSignalKey()" class="mt-3 rounded border border-red-300 bg-white px-3 py-2 text-xs font-bold text-red-700">Legacy Firebase key record মুছুন</button>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3 mb-4">
                     <div>
@@ -804,8 +805,13 @@
 
         <!-- BLOOD TAB -->
         <div id="tab-blood" class="hidden-custom space-y-6">
-            <h2 class="text-2xl font-bold text-red-600">রক্তদাতা তালিকা</h2>
-            <div id="list-donors" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div><h2 class="text-2xl font-bold text-red-600">রক্ত সেবা ব্যবস্থাপনা</h2><p class="mt-1 text-sm text-gray-500">Native App-এর donor projection ও private request queue</p></div>
+                <div class="flex gap-2"><button onclick="switchBloodTab('requests')" id="btn-blood-requests" class="rounded-lg border border-red-200 bg-red-600 px-4 py-2 text-sm font-bold text-white">রিকোয়েস্ট <span id="badge-blood-requests" class="ml-1 rounded-full bg-white/20 px-2">0</span></button><button onclick="switchBloodTab('donors')" id="btn-blood-donors" class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-bold text-gray-700">ডোনার</button></div>
+            </div>
+            <p class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">রক্তের রিকোয়েস্টের যোগাযোগের তথ্য কেবল অনুরোধকারীর private record থেকে প্রয়োজন হলে দেখা হবে। ডোনারের ফোন নম্বর শুধু consentUpdatedAt থাকা রেকর্ডে দেখানো হবে এবং public projection-এ কপি করা হবে না।</p>
+            <div id="blood-requests-panel" class="space-y-3"></div>
+            <div id="blood-donors-panel" class="hidden-custom"><div id="list-donors" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div></div>
         </div>
 
         <!-- EMERGENCY ALERT TAB -->
@@ -966,10 +972,26 @@
                 </div>
                 <button onclick="saveWebsiteSettings()" class="mt-4 bg-indigo-600 text-white px-6 py-2 rounded font-bold hover:bg-indigo-700 transition w-full md:w-auto shadow">ওয়েবসাইট সেটিং সেভ করুন</button>
             </div>
+
+            <div class="card mt-4 border-green-200 bg-green-50 p-6">
+                <h3 class="mb-2 font-bold text-green-900"><i class="fa-solid fa-mobile-screen-button mr-2"></i>Pathargata Native App · Runtime Control</h3>
+                <p class="mb-4 text-xs leading-5 text-green-800">এই মানগুলো Native App-এর `admin_settings` paths-এর সঙ্গে যুক্ত। Version/লিংক প্রকাশ করলে app update prompt দেখাতে পারে; এটি নীরব OTA build/deploy নয়।</p>
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <div><label class="mb-1 block text-xs font-bold text-gray-600">Native app version</label><input id="native-app-version" inputmode="decimal" maxlength="24" placeholder="যেমন 1.2.3" class="w-full rounded-lg border bg-white p-3 font-mono"></div>
+                    <div><label class="mb-1 block text-xs font-bold text-gray-600">Update / APK HTTPS URL</label><input id="native-update-link" type="url" maxlength="512" placeholder="https://..." class="w-full rounded-lg border bg-white p-3"></div>
+                    <div class="md:col-span-2"><label class="mb-1 block text-xs font-bold text-gray-600">App download / share URL (ঐচ্ছিক)</label><input id="native-download-url" type="url" maxlength="512" placeholder="https://..." class="w-full rounded-lg border bg-white p-3"></div>
+                </div>
+                <button onclick="saveNativeAppSettings()" id="btn-save-native-settings" class="mt-3 rounded-lg bg-green-700 px-5 py-3 font-bold text-white hover:bg-green-800">Native app settings সংরক্ষণ</button>
+                <div class="mt-6 border-t border-green-200 pt-5">
+                    <div class="flex flex-wrap items-center justify-between gap-2"><div><h4 class="font-bold text-gray-800">Maintenance mode</h4><p class="mt-1 max-w-2xl text-xs leading-5 text-gray-600">চালু করলে সাধারণ ব্যবহারকারীরা maintenance notice দেখবেন। App-এ লেখা message ও admin bypass সক্রিয় হবে।</p></div><span id="maintenance-state" class="rounded-full bg-gray-200 px-3 py-1 text-xs font-bold text-gray-700">অবস্থা লোড হচ্ছে</span></div>
+                    <textarea id="maintenance-message" maxlength="300" rows="3" placeholder="ব্যবহারকারীদের জন্য বার্তা (সর্বোচ্চ ৩০০ অক্ষর)" class="mt-3 w-full rounded-lg border bg-white p-3"></textarea>
+                    <div class="mt-2 flex items-center justify-between gap-2"><span id="maintenance-char-count" class="text-xs text-gray-500">0/300</span><div class="flex gap-2"><button onclick="saveMaintenanceMode(false)" id="btn-maintenance-off" class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-bold text-gray-700">বন্ধ করুন</button><button onclick="saveMaintenanceMode(true)" id="btn-maintenance-on" class="rounded-lg bg-orange-600 px-4 py-2 text-sm font-bold text-white">Maintenance চালু করুন</button></div></div>
+                </div>
+            </div>
             
             <!-- NEW: OTA App Version Control -->
             <div class="card p-6 border-red-100 bg-red-50 mt-4">
-                <h3 class="font-bold text-red-800 mb-3"><i class="fa-solid fa-mobile-screen-button"></i> অটোমেটিক অ্যাপ আপডেট (OTA)</h3>
+                <h3 class="font-bold text-red-800 mb-3"><i class="fa-solid fa-mobile-screen-button"></i> Legacy website / OTA version field</h3>
                 <div class="flex flex-col md:flex-row gap-4 items-end">
                     <div class="flex-1">
                         <label class="block text-xs font-bold text-gray-500 mb-1">নতুন অ্যাপ ভার্সন (New App Version)</label>
@@ -977,7 +999,7 @@
                     </div>
                     <button onclick="saveAppVersion()" id="btn-save-version" class="bg-red-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-red-700 transition w-full md:w-auto shadow">ভার্সন আপডেট করুন</button>
                 </div>
-                <p class="text-xs text-red-600 mt-2"><i class="fa-solid fa-triangle-exclamation"></i> এখানে ভার্সন আপডেট করলে ইউজারদের ফোনে সাথে সাথে অ্যাপটি সাইলেন্ট রিস্টার্ট নিয়ে নতুন ডিজাইন ডাউনলোড করবে।</p>
+                <p class="text-xs text-red-600 mt-2"><i class="fa-solid fa-triangle-exclamation"></i> এই পুরোনো `app_version` field Native App-এর build স্বয়ংক্রিয়ভাবে deploy বা silently update করে না। নতুন Native build-এর জন্য উপরের Native App controls ব্যবহার করুন।</p>
             </div>
             
             <div class="card p-6 mt-4">
@@ -1319,9 +1341,8 @@
 
     // --- STORY CLOUDINARY API CONSTANTS (For 24H Stories Only) ---
     const STORY_CLOUDINARY_CLOUD_NAME = "dixazfmlr"; 
-    const STORY_CLOUDINARY_API_KEY = "615912428625424"; 
-    const STORY_CLOUDINARY_API_SECRET = "dxxr3JLEVXYfHJiW9GovjcBM3jM";
-
+    const STORY_CLOUDINARY_API_KEY = "";
+    const STORY_CLOUDINARY_API_SECRET = "";
     const firebaseConfig = {
         apiKey: "AIzaSyBfI-THOXOvhyL7LumZVKixtTVwF94CjsI",
         authDomain: "pathargata-digital-comnity-ltd.firebasestorage.app",
@@ -1526,25 +1547,75 @@
         });
     };
 
-    function checkAdmin(uid) {
-        get(ref(db, `users/${uid}`)).then(snap => {
-            const btn = document.getElementById('btn-login');
-            if(snap.exists() && (['admin', 'moderator'].includes(snap.val().role) || snap.val().permissions)) {
+    let loadedAdminUid = null;
+    async function checkAdmin(uid) {
+        const btn = document.getElementById('btn-login');
+        try {
+            const user = auth.currentUser;
+            if (!user || user.uid !== uid) return;
+            const token = await user.getIdTokenResult();
+            if (token.claims.admin === true) {
                 document.getElementById('admin-login').classList.add('hidden-custom');
-                loadData();
-            } else {
-                alert("আপনার এডমিন পারমিশন নেই!");
-                signOut(auth);
-                if(btn) { btn.innerHTML = 'লগইন'; btn.disabled = false; }
+                if (loadedAdminUid !== uid) {
+                    loadedAdminUid = uid;
+                    loadData();
+                }
+                return;
             }
-        });
+            alert("আপনার Firebase admin custom claim নেই। Profile-এর role field একা admin access দেয় না।");
+            loadedAdminUid = null;
+            await signOut(auth);
+            if(btn) { btn.innerHTML = 'লগইন'; btn.disabled = false; }
+        } catch (error) {
+            console.error('Admin claim validation failed:', error);
+            if(btn) { btn.innerHTML = 'লগইন'; btn.disabled = false; }
+            alert("Admin access যাচাই করা যায়নি। Internet connection ও Firebase admin claim পরীক্ষা করুন।");
+        }
     }
 
-    window.adminLogout = () => { if(confirm("লগআউট?")) signOut(auth).then(()=> location.reload()); };
+    window.adminLogout = () => { if(confirm("লগআউট?")) signOut(auth).then(()=> { loadedAdminUid = null; location.reload(); }); };
 
     onAuthStateChanged(auth, (user) => {
         if(user) checkAdmin(user.uid);
     });
+
+    window.switchBloodTab = (tab) => {
+        const requests = tab === 'requests';
+        document.getElementById('blood-requests-panel').classList.toggle('hidden-custom', !requests);
+        document.getElementById('blood-donors-panel').classList.toggle('hidden-custom', requests);
+        document.getElementById('btn-blood-requests').className = `rounded-lg border px-4 py-2 text-sm font-bold ${requests ? 'border-red-200 bg-red-600 text-white' : 'border-gray-200 bg-white text-gray-700'}`;
+        document.getElementById('btn-blood-donors').className = `rounded-lg border px-4 py-2 text-sm font-bold ${!requests ? 'border-red-200 bg-red-600 text-white' : 'border-gray-200 bg-white text-gray-700'}`;
+    };
+    window.showBloodPrivateDetails = async (requestId) => {
+        try {
+            const snapshot = await get(ref(db, `blood_request_private/${requestId}`));
+            if (!snapshot.exists()) return alert('এই রিকোয়েস্টের private contact record পাওয়া যায়নি।');
+            const details = snapshot.val() || {};
+            alert(`অনুরোধকারী: ${details.requesterName || '—'}\nযোগাযোগ: ${details.contact || '—'}\nরোগী: ${details.patientName || 'উল্লেখ নেই'}\nহাসপাতাল: ${details.hospital || '—'}\nবিবরণ: ${details.details || 'নেই'}`);
+        } catch (error) {
+            alert('Private contact পড়া যায়নি। Admin claim ও Firebase rules পরীক্ষা করুন.');
+            console.error('Blood private record read failed:', error);
+        }
+    };
+    window.updateBloodRequestStatus = async (requestId, status) => {
+        const user = auth.currentUser;
+        if (!user) return alert('Admin session নেই। আবার লগইন করুন।');
+        const labels = { verification_in_progress: 'যাচাই চলছে', awaiting_donor_response: 'যাচাইকৃত · ডোনারের উত্তরের অপেক্ষা', arrangements_confirmed: 'ব্যবস্থা নিশ্চিত', completed: 'সম্পন্ন', cancelled: 'বাতিল' };
+        if (!labels[status]) return alert('অবৈধ request status।');
+        const snapshot = await get(ref(db, `blood_requests/${requestId}`));
+        if (!snapshot.exists()) return alert('রিকোয়েস্টটি আর পাওয়া যাচ্ছে না।');
+        const record = snapshot.val() || {};
+        if (['completed', 'cancelled', 'expired'].includes(record.status)) return alert('এই রিকোয়েস্টটি ইতিমধ্যে বন্ধ হয়েছে।');
+        const verificationStatus = status === 'awaiting_donor_response' ? 'verified' : record.verificationStatus;
+        const nextAction = status === 'awaiting_donor_response' ? 'যাচাইকৃত অনুরোধ—উপযুক্ত ডোনার সাড়া দেবেন' : labels[status];
+        if (!confirm(`Tracking ID ${record.trackingId || requestId} · ${labels[status]} হিসেবে পরিবর্তন করবেন?`)) return;
+        try {
+            await update(ref(db, `blood_requests/${requestId}`), { status, verificationStatus, updatedAt: Date.now(), updatedBy: user.uid, nextAction });
+        } catch (error) {
+            console.error('Blood request moderation failed:', error);
+            alert('স্ট্যাটাস আপডেট হয়নি। Firebase rules deploy হয়েছে কি না এবং আপনার admin custom claim আছে কি না যাচাই করুন।');
+        }
+    };
 
     function getTimestampFromId(id) {
         try { return new Date(parseInt(id.substring(0,8), 16) * 1000).getTime(); } catch(e) { return Date.now(); }
@@ -2444,16 +2515,35 @@
             list.innerHTML = Object.entries(data).reverse().map(([id, d]) => `
                 <div class="bg-white p-4 rounded-xl shadow-sm border border-red-50 flex justify-between items-center">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center text-red-600 font-bold text-xs border border-red-200">${d.bloodGroup}</div>
+                        <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center text-red-600 font-bold text-xs border border-red-200">${escapeHTML(d.bloodGroup || '—')}</div>
                         <div>
-                            <p class="font-bold text-gray-800 text-sm cursor-pointer hover:text-blue-600" onclick="viewUserDetails('${d.uid}')">${d.name}</p>
-                            <p class="text-[10px] text-gray-500"><i class="fa-solid fa-phone"></i> ${d.phone}</p>
-                            <p class="text-[10px] text-gray-500"><i class="fa-solid fa-location-dot"></i> ${d.union || ''}, ${d.village || ''}</p>
+                            <p class="font-bold text-gray-800 text-sm cursor-pointer hover:text-blue-600" onclick="viewUserDetails('${escapeHTML(d.uid || id)}')">${escapeHTML(d.name || 'রক্তদাতা')}</p>
+                            <p class="text-[10px] text-gray-500">${d.consentUpdatedAt && d.phone ? `<i class="fa-solid fa-phone"></i> ${escapeHTML(d.phone)} · সম্মতি আছে` : '<i class="fa-solid fa-shield-halved"></i> ফোন দেখানো হয়নি · consentUpdatedAt নেই'}</p>
+                            <p class="text-[10px] text-gray-500"><i class="fa-solid fa-location-dot"></i> ${escapeHTML(d.serviceArea || [d.union, d.village].filter(Boolean).join(', ') || 'এলাকা উল্লেখ নেই')}</p>
                         </div>
                     </div>
-                    <button onclick="deleteItem('donors/${id}')" class="text-red-500 bg-red-50 p-2 rounded hover:bg-red-100"><i class="fa-solid fa-trash"></i></button>
+                    <button onclick="deleteItem('donors/${id}')" title="Private donor record সরান" class="text-red-500 bg-red-50 p-2 rounded hover:bg-red-100"><i class="fa-solid fa-trash"></i></button>
                 </div>
             `).join('');
+        });
+
+        onValue(query(ref(db, 'blood_requests'), orderByChild('createdAt'), limitToLast(100)), (snap) => {
+            const list = document.getElementById('blood-requests-panel');
+            const records = Object.entries(snap.val() || {}).sort((a, b) => Number((b[1] || {}).createdAt || 0) - Number((a[1] || {}).createdAt || 0));
+            const pending = records.filter(([, r]) => ['new', 'verification_in_progress'].includes(r.status)).length;
+            document.getElementById('badge-blood-requests').textContent = String(pending);
+            if (!records.length) { list.innerHTML = '<p class="rounded-xl border bg-white py-10 text-center text-gray-400">কোনো blood request নেই</p>'; return; }
+            const statusLabels = { new: 'নতুন — যাচাই প্রয়োজন', verification_in_progress: 'যাচাই চলছে', awaiting_donor_response: 'ডোনারের উত্তরের অপেক্ষা', donor_responded: 'ডোনার সাড়া দিয়েছেন', arrangements_confirmed: 'ব্যবস্থা নিশ্চিত', completed: 'সম্পন্ন', cancelled: 'বাতিল', expired: 'সময় শেষ' };
+            list.innerHTML = records.map(([id, r]) => {
+                const responseCount = Object.keys(r.responses || {}).length;
+                const closed = ['completed', 'cancelled', 'expired'].includes(r.status);
+                const actions = closed ? '' : `${r.status === 'new' ? `<button onclick="updateBloodRequestStatus('${escapeHTML(id)}','verification_in_progress')" class="rounded bg-blue-600 px-3 py-2 text-xs font-bold text-white">যাচাই শুরু</button>` : ''}${r.status === 'verification_in_progress' ? `<button onclick="updateBloodRequestStatus('${escapeHTML(id)}','awaiting_donor_response')" class="rounded bg-green-700 px-3 py-2 text-xs font-bold text-white">যাচাই করে ডোনারের কাছে পাঠান</button>` : ''}${r.status === 'donor_responded' ? `<button onclick="updateBloodRequestStatus('${escapeHTML(id)}','arrangements_confirmed')" class="rounded bg-indigo-600 px-3 py-2 text-xs font-bold text-white">ব্যবস্থা নিশ্চিত</button>` : ''}${r.status === 'arrangements_confirmed' ? `<button onclick="updateBloodRequestStatus('${escapeHTML(id)}','completed')" class="rounded bg-green-700 px-3 py-2 text-xs font-bold text-white">সম্পন্ন</button>` : ''}<button onclick="updateBloodRequestStatus('${escapeHTML(id)}','cancelled')" class="rounded border border-red-200 px-3 py-2 text-xs font-bold text-red-700">বাতিল</button>`;
+                const time = r.createdAt ? new Date(Number(r.createdAt)).toLocaleString('bn-BD') : 'সময় অনুল্লেখিত';
+                return `<article class="rounded-xl border border-red-100 bg-white p-4 shadow-sm"><div class="flex flex-wrap items-start justify-between gap-3"><div class="min-w-[240px] flex-1"><div class="flex flex-wrap items-center gap-2"><span class="rounded-lg bg-red-600 px-3 py-1.5 font-bold text-white">${escapeHTML(r.bloodGroup || '—')}</span><span class="rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-red-800">${escapeHTML(statusLabels[r.status] || r.status || 'অজানা')}</span><span class="text-xs text-gray-500">${responseCount} জন সাড়া</span></div><h3 class="mt-3 font-bold text-gray-900">${escapeHTML(r.area || 'এলাকা উল্লেখ নেই')} · ${escapeHTML(r.units || '1')} bag</h3><p class="mt-1 text-sm text-gray-700">Tracking ID: <span class="font-mono font-bold">${escapeHTML(r.trackingId || id)}</span></p><p class="mt-1 text-xs text-gray-500">প্রয়োজন: ${escapeHTML(r.neededAt || '—')} · জরুরিতা: ${escapeHTML(r.urgency || '—')} · ${escapeHTML(time)}</p><p class="mt-1 text-xs text-gray-500">যাচাই: ${escapeHTML(r.verificationStatus || '—')} · Requester UID: ${escapeHTML(r.requesterUid || '—')}</p><div class="mt-3"><button onclick="showBloodPrivateDetails('${escapeHTML(id)}')" class="rounded border border-gray-300 bg-gray-50 px-3 py-2 text-xs font-bold text-gray-700"><i class="fa-solid fa-lock mr-1"></i> Private contact দেখুন</button></div></div><div class="flex flex-wrap gap-2">${actions}</div></div></article>`;
+            }).join('');
+        }, (error) => {
+            console.error('Blood request queue read failed:', error);
+            document.getElementById('blood-requests-panel').innerHTML = '<p class="rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700">Blood request queue load হয়নি। Admin claim, database rules ও deployed index পরীক্ষা করুন।</p>';
         });
         
         onValue(ref(db, 'app_info/name'), (snap) => { if(snap.exists()) document.getElementById('app-name-input').value = snap.val(); });
@@ -2476,6 +2566,15 @@
             
             // Load App Version
             if(settings.app_version) document.getElementById('app-ota-version').value = settings.app_version;
+            document.getElementById('native-app-version').value = settings.native_app_version || '';
+            document.getElementById('native-update-link').value = settings.native_update_link || '';
+            document.getElementById('native-download-url').value = settings.app_download_url || '';
+            const maintenance = settings.app_maintenance || {};
+            document.getElementById('maintenance-message').value = maintenance.message || '';
+            document.getElementById('maintenance-char-count').textContent = `${(maintenance.message || '').length}/300`;
+            const maintenanceState = document.getElementById('maintenance-state');
+            maintenanceState.textContent = maintenance.enabled ? 'Maintenance চালু' : 'অ্যাপ চালু';
+            maintenanceState.className = `rounded-full px-3 py-1 text-xs font-bold ${maintenance.enabled ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'}`;
 
             if(settings.links && settings.links.help) document.getElementById('link-help').value = settings.links.help;
             if(settings.privacy_link) document.getElementById('link-privacy').value = settings.privacy_link;
@@ -3804,7 +3903,7 @@
         const version = document.getElementById('app-ota-version').value.trim();
         if(!version) return alert("দয়া করে অ্যাপ ভার্সন দিন!");
         
-        if(!confirm(`আপনি কি নিশ্চিত যে নতুন অ্যাপ ভার্সন ${version} রিলিজ করতে চান? এটি করলে সব ইউজারের ফোনে অ্যাপ রিস্টার্ট হবে।`)) return;
+        if(!confirm(`পুরোনো app_version field-এ ${version} সেভ করবেন? এটি কোনো নতুন native build publish বা ফোনে silent update করবে না।`)) return;
 
         const btn = document.getElementById('btn-save-version');
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> আপডেট হচ্ছে...';
@@ -3813,13 +3912,61 @@
         update(ref(db, 'admin_settings'), {
             app_version: version
         }).then(() => {
-            alert("অ্যাপ ভার্সন সফলভাবে আপডেট হয়েছে! ইউজারদের ফোনে আপডেট শুরু হয়ে গেছে।");
+            alert("Legacy app_version field সেভ হয়েছে। Native build-এর জন্য উপরের Native App controls ব্যবহার করুন।");
         }).catch((e) => {
             alert("ত্রুটি: " + e.message);
         }).finally(() => {
             btn.innerHTML = 'ভার্সন আপডেট করুন';
             btn.disabled = false;
         });
+    };
+
+    window.saveNativeAppSettings = async () => {
+        const version = document.getElementById('native-app-version').value.trim();
+        const updateLink = document.getElementById('native-update-link').value.trim();
+        const downloadUrl = document.getElementById('native-download-url').value.trim();
+        const btn = document.getElementById('btn-save-native-settings');
+        if (!/^\d+(\.\d+){1,3}$/.test(version)) return alert('Version format দিন—যেমন 1.2.3');
+        for (const value of [updateLink, downloadUrl].filter(Boolean)) {
+            try { const url = new URL(value); if (url.protocol !== 'https:') throw new Error(); }
+            catch { return alert('Update ও download URL অবশ্যই বৈধ HTTPS link হতে হবে।'); }
+        }
+        if (!updateLink) return alert('Native update link আবশ্যক।');
+        if (!confirm(`Native App-এর version ${version} ও update/download link সংরক্ষণ করবেন? এটি build নিজে থেকে deploy করে না।`)) return;
+        btn.disabled = true;
+        const original = btn.textContent;
+        btn.textContent = 'সংরক্ষণ হচ্ছে…';
+        try {
+            const values = {
+                'admin_settings/native_app_version': version,
+                'admin_settings/native_update_link': updateLink,
+                'admin_settings/app_download_url': downloadUrl || null,
+            };
+            await update(ref(db), values);
+            alert('Native App update ও download settings সেভ হয়েছে।');
+        } catch (error) {
+            console.error('Native app settings save failed:', error);
+            alert('Native settings সেভ হয়নি: ' + (error.message || 'permission denied'));
+        } finally { btn.disabled = false; btn.textContent = original; }
+    };
+
+    document.getElementById('maintenance-message')?.addEventListener('input', (event) => {
+        document.getElementById('maintenance-char-count').textContent = `${event.target.value.length}/300`;
+    });
+    window.saveMaintenanceMode = async (enabled) => {
+        const user = auth.currentUser;
+        const messageInput = document.getElementById('maintenance-message');
+        const message = messageInput.value.trim() || (enabled ? 'অ্যাপ রক্ষণাবেক্ষণ চলছে। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন।' : '');
+        if (!user) return alert('Admin session নেই। আবার লগইন করুন।');
+        if (enabled && !confirm('Maintenance mode চালু করলে সাধারণ ব্যবহারকারীদের অ্যাপ সাময়িকভাবে বন্ধ দেখাবে। চালু করবেন?')) return;
+        if (!enabled && !confirm('Maintenance mode বন্ধ করে অ্যাপ ব্যবহারকারীদের জন্য খুলে দেবেন?')) return;
+        try {
+            await set(ref(db, 'admin_settings/app_maintenance'), { enabled: Boolean(enabled), message: message.slice(0, 300), updatedAt: Date.now(), updatedBy: user.uid });
+            alert(enabled ? 'Maintenance mode চালু হয়েছে.' : 'Maintenance mode বন্ধ হয়েছে.');
+        } catch (error) {
+            console.error('Maintenance mode update failed:', error);
+            alert('Maintenance setting সেভ হয়নি। Firebase rules deploy এবং admin custom claim পরীক্ষা করুন।');
+        }
     };
 
     // --- QUICK ACTIONS ---
@@ -3965,11 +4112,7 @@
                 document.getElementById('onesignal-msg').value = "";
                 document.getElementById('onesignal-image').value = "";
                 
-                // Save Keys to Firebase Admin Settings for future use
-                update(ref(db, 'admin_settings/onesignal_keys'), {
-                    app_id: appId,
-                    rest_api_key: restApiKey
-                });
+                document.getElementById('onesignal-rest-api').value = '';
             } else {
                 throw new Error(JSON.stringify(data.errors));
             }
@@ -3982,14 +4125,19 @@
         }
     };
 
-    // Load saved OneSignal keys when admin logs in
-    onValue(ref(db, 'admin_settings/onesignal_keys'), (snap) => {
-        if (snap.exists()) {
-            const keys = snap.val();
-            document.getElementById('onesignal-app-id').value = keys.app_id || '';
-            document.getElementById('onesignal-rest-api').value = keys.rest_api_key || '';
+    window.purgeLegacyOneSignalKey = async () => {
+        const user = auth.currentUser;
+        if (!user) return alert('Admin session নেই।');
+        const token = await user.getIdTokenResult();
+        if (token.claims.admin !== true) return alert('শুধু Firebase admin custom claim এই পরিবর্তন করতে পারে।');
+        if (!confirm('admin_settings/onesignal_keys record-টি Firebase থেকে স্থায়ীভাবে মুছবেন? মুছলেও পুরোনো key exposed হয়ে থাকলে OneSignal-এ সেটি rotate করতে হবে।')) return;
+        try {
+            await remove(ref(db, 'admin_settings/onesignal_keys'));
+            alert('পুরোনো Firebase key record মুছে ফেলা হয়েছে। OneSignal dashboard-এ API key revoke/rotate করুন।');
+        } catch (error) {
+            alert('Legacy key record মুছতে পারেনি: ' + (error.message || 'permission denied'));
         }
-    });
+    };
 
     window.openModal = (id) => { const m = document.getElementById(id); m.classList.remove('hidden-custom'); void m.offsetWidth; m.classList.remove('opacity-0', 'pointer-events-none'); m.classList.add('open'); }
     window.closeModal = (id) => { const m = document.getElementById(id); m.classList.remove('open'); m.classList.add('opacity-0', 'pointer-events-none'); setTimeout(() => m.classList.add('hidden-custom'), 300); }
