@@ -706,6 +706,10 @@
                         <label class="block text-xs font-bold text-gray-500 mb-1 text-green-600"><i class="fa-brands fa-whatsapp"></i> WhatsApp Lock Screen Link (লক স্ক্রিন সাপোর্ট)</label>
                         <input type="text" id="link-whatsapp" placeholder="https://wa.me/..." class="border p-2 rounded w-full focus:outline-green-500 bg-green-50">
                     </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1 text-sky-700">Telegram Lock Screen Link (লক স্ক্রিন সাপোর্ট)</label>
+                        <input type="url" id="link-telegram" placeholder="https://t.me/username" class="border p-2 rounded w-full bg-sky-50">
+                    </div>
 
                     <button onclick="saveLinks()" class="bg-green-600 text-white px-4 py-2 rounded font-bold hover:bg-green-700">লিংক সেভ করুন</button>
                 </div>
@@ -1758,6 +1762,7 @@
             if(settings.update_link) document.getElementById('link-update').value = settings.update_link;
             if(settings.rules_link) document.getElementById('link-rules').value = settings.rules_link;
             if(settings.whatsapp_link) document.getElementById('link-whatsapp').value = settings.whatsapp_link;
+            if(settings.telegram_link) document.getElementById('link-telegram').value = settings.telegram_link;
 
             const screenshots = settings.app_screenshots || {};
             const screenshotList = document.getElementById('list-screenshots');
@@ -2653,6 +2658,7 @@
         const updateLink = document.getElementById('link-update').value.trim();
         const rules = document.getElementById('link-rules').value.trim();
         const whatsapp = document.getElementById('link-whatsapp').value.trim();
+        const telegram = document.getElementById('link-telegram').value.trim();
 
         update(ref(db, 'admin_settings'), {
             'links/help': help,
@@ -2661,7 +2667,8 @@
             'share_link': share,
             'update_link': updateLink,
             'rules_link': rules,
-            'whatsapp_link': whatsapp
+            'whatsapp_link': whatsapp,
+            'telegram_link': telegram
         }).then(() => alert("লিংক সেভ করা হয়েছে!"));
     };
 

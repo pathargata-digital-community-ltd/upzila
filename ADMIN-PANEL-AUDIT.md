@@ -43,3 +43,4 @@
 
 - Local Firebase RTDB emulator test: ১৯টি test file-এর ১০৬টি test পাস করেছে, নতুন area-access owner/admin authorization tests-সহ।
 - Native App TypeScript check (`pnpm run check`) সফল হয়েছে।
+- Lock screen-এর Admin Contact: বিদ্যমান WhatsApp link অক্ষত রেখে Settings-এ Telegram link যোগ করা হয়েছে; Native App কেবল অনুমোদিত domain-এর HTTPS link-ই খোলে।
