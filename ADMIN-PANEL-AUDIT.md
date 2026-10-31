@@ -53,3 +53,8 @@
 - Admin verification queue-তে category badge, payment method, প্রাপকের/প্রেরকের নম্বর, TrxID এবং নিরাপদ image preview দেখানো হয়। Approve করলে request-এর validated category-ই user profile-এ লেখা হয়।
 - `people_index` rule ও emulator test category mismatch/spoof ঠেকায়। নতুন RTDB rules source repo-তে আছে; live Firebase rules deploy করা হয়নি। Production-এ public category badge strict রাখতে rules deploy দরকার।
 - সর্বশেষ যাচাই: Native App `pnpm run check` সফল, static Expo web export সফল, ১৯টি rules test file-এর ১০৮টি test পাস।
+
+
+## Admin-only download ও maintenance settings
+
+`app_download_url` control Admin Panel-এর Native App Runtime Control-এ রাখা হয়েছে; Native App-এর profile-card download button, share text ও QR payload থেকে এটি সরানো হয়েছে। Maintenance চালু/বন্ধ করার editable control কেবল Admin Panel-এ থাকবে। Native App-এ user-editable maintenance setting নেই; Admin চালু করলে ব্যবহারকারীরা notice পান বলে read-only maintenance listener/notice রাখা হয়েছে।
