@@ -41,6 +41,15 @@
 - Native app source-এ OneSignal integration পাওয়া যায়নি; deleted panel handler key revoke/rotate করেনি। Cloudinary deletion endpoint বা OneSignal key rotation হয়নি—এগুলো আলাদা server/account-side কাজ।
 - Firebase rules file ও panel source repo-তে থাকা পরিবর্তন; GitHub Pages push এবং Firebase live rules deployment আলাদা অপারেশন।
 
-- Local Firebase RTDB emulator test: ১৯টি test file-এর ১০৬টি test পাস করেছে, নতুন area-access owner/admin authorization tests-সহ।
+- Local Firebase RTDB emulator test: ১৯টি test file-এর ১০৮টি test পাস করেছে, নতুন area-access owner/admin authorization tests-সহ।
 - Native App TypeScript check (`pnpm run check`) সফল হয়েছে।
 - Lock screen-এর Admin Contact: বিদ্যমান WhatsApp link অক্ষত রেখে Settings-এ Telegram link যোগ করা হয়েছে; Native App কেবল অনুমোদিত domain-এর HTTPS link-ই খোলে।
+
+## অতিরিক্ত আপডেট — Verification Badge ও পেমেন্ট
+
+- Verification screen-এ ৬টি ক্যাটাগরির আলাদা রঙ, আইকন, depth/shadow-সহ 3D-স্টাইল badge preview যোগ হয়েছে: পাবলিক ফিগার, কন্টেন্ট ক্রিয়েটর, সাংবাদিক, ব্যবসা, পেশাজীবী ও অন্যান্য যাচাইকৃত প্রোফাইল। Approved category নিজের profile এবং public profile-এ দেখানো হয়।
+- Settings-এ bKash, Nagad ও Rocket-এর প্রাপকের নম্বর সেট করার control যোগ হয়েছে। নম্বরগুলো signed-in app user পড়তে পারে; লেখা/পরিবর্তন custom-claim Admin-এর জন্য সীমাবদ্ধ। Website-এর বিদ্যমান settings/link fields অক্ষত।
+- Verification application-এ wallet method বাছাই, admin-configured নম্বর কপি, প্রেরকের নম্বর, TrxID, NID ও নথি জমা দেওয়া যায়। এটি manual payment flow—কোনো স্বয়ংক্রিয় wallet API/transaction confirmation নয়; Admin-কে TrxID মিলিয়ে অনুমোদন করতে হবে।
+- Admin verification queue-তে category badge, payment method, প্রাপকের/প্রেরকের নম্বর, TrxID এবং নিরাপদ image preview দেখানো হয়। Approve করলে request-এর validated category-ই user profile-এ লেখা হয়।
+- `people_index` rule ও emulator test category mismatch/spoof ঠেকায়। নতুন RTDB rules source repo-তে আছে; live Firebase rules deploy করা হয়নি। Production-এ public category badge strict রাখতে rules deploy দরকার।
+- সর্বশেষ যাচাই: Native App `pnpm run check` সফল, static Expo web export সফল, ১৯টি rules test file-এর ১০৮টি test পাস।
