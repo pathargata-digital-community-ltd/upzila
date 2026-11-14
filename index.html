@@ -1990,6 +1990,11 @@
 
             if (users.length < PAGE_SIZE) { btn.classList.add('hidden'); } else { btn.innerHTML = 'আরো দেখুন <i class="fa-solid fa-chevron-down ml-2"></i>'; }
             if(users.length === 0 && reset) { list.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-gray-400">কোনো ইউজার পাওয়া যায়নি</td></tr>'; } else { renderUserRows(users); }
+        }).catch((error) => {
+            console.error('Admin user list load failed:', error);
+            list.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-red-600">ইউজার লোড হয়নি। Admin claim ও Firebase Rules পরীক্ষা করুন।</td></tr>';
+            btn.innerHTML = 'আবার চেষ্টা করুন <i class="fa-solid fa-rotate-right ml-2"></i>';
+            btn.classList.remove('hidden');
         });
     };
 
@@ -2115,6 +2120,11 @@
             if(posts.length === 0 && reset) { list.innerHTML = '<p class="col-span-3 text-center text-gray-400 py-10">কোনো পোস্ট নেই</p>'; } else {
                 posts.forEach(p => { list.innerHTML += createPostHTML(p, true); });
             }
+        }).catch((error) => {
+            console.error('Admin post list load failed:', error);
+            list.innerHTML = '<p class="col-span-3 text-center text-red-600 py-10">পোস্ট লোড হয়নি। Admin claim ও Firebase Rules পরীক্ষা করুন।</p>';
+            btn.innerHTML = 'আবার চেষ্টা করুন <i class="fa-solid fa-rotate-right ml-2"></i>';
+            btn.classList.remove('hidden');
         });
     };
 
