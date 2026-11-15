@@ -2,6 +2,8 @@
 
 এই ডকুমেন্টটি নতুন যোগ করা Admin Panel ফিচারগুলো production data পরিবর্তন না করে যাচাই করার জন্য তৈরি করা হয়েছে। প্রথমে Firebase Emulator বা আলাদা test dataset ব্যবহার করুন। Live database-এ destructive test চালাবেন না।
 
+> **Authorization prerequisite:** Admin account-এর Firebase Auth custom claim অবশ্যই `{ "admin": true }` হতে হবে। শুধু profile-এর `role` field বা `admin@gmail.com` email Admin access-এর প্রমাণ নয়।
+
 ## ১. Test প্রস্তুতি
 
 ### প্রয়োজনীয় test account
