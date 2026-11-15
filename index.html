@@ -972,6 +972,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getDatabase, ref, push, set, onValue, get, update, remove, query, orderByKey, limitToFirst, limitToLast, startAfter, endBefore, orderByChild, equalTo, runTransaction, endAt } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 
     // Cloudinary media deletion must run on a trusted server; never place API secrets in this public browser app.
     const firebaseConfig = {
@@ -987,6 +988,10 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
     const auth = getAuth(app);
+    const functions = getFunctions(app, 'us-central1');
+    const purgeUserAccount = httpsCallable(functions, 'purgeUserAccount');
+    const purgeTrashPost = httpsCallable(functions, 'purgeTrashPost');
+    const restoreTrashPost = httpsCallable(functions, 'restoreTrashPost');
 
     let allComplaints =[];
 
@@ -1039,91 +1044,20 @@
         }
     }
 
-    // --- PERMANENT DELETION (SERVER-SIDE ONLY) ---
-    window.extractPublicIdFromCloudinaryUrl = (url) => {
-        if(!url || !url.includes('cloudinary.com')) return null;
-        const matches = url.match(/\/upload\/(?:v\d+\/)?([^\.]+)/);
-        return matches ? matches[1] : null;
-    };
-
-    window.deleteFromCloudinary = async (url, resourceType = 'image', isStory = false) => {
-        const publicId = extractPublicIdFromCloudinaryUrl(url);
-        if (!publicId) return true;
-        console.error('Cloudinary signed deletion is unavailable in this browser panel:', { publicId, resourceType, isStory });
-        throw new Error('নিরাপদ Cloudinary server endpoint সেটআপ না থাকায় মিডিয়া মুছতে পারিনি। কোনো Firebase record মুছার আগে server-side delete function যোগ করুন।');
-    };
-
     window.processAccountDeletion = async (uid, btnElement) => {
-        if(!confirm("এই কাজটি স্থায়ী। Cloudinary media delete-এর জন্য secure server endpoint প্রয়োজন; endpoint না থাকলে মিডিয়া থাকা account deletion থেমে যাবে। Firebase account data মুছতে এগোবেন?")) return;
+        if(!confirm("এই কাজটি স্থায়ী। Account-এর Firebase data, Auth account এবং Cloudinary media server-side purge হবে। এগোবেন?")) return;
 
         const originalText = btnElement.innerHTML;
         btnElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Deleting...';
         btnElement.disabled = true;
 
         try {
-            // 1. Fetch user profile (to delete profile_pic, cover_pic, etc.)
-            const userSnap = await get(ref(db, `users/${uid}`));
-            if(userSnap.exists()) {
-                const user = userSnap.val();
-                if(user.profile_pic) await deleteFromCloudinary(user.profile_pic, 'image');
-                if(user.cover_pic) await deleteFromCloudinary(user.cover_pic, 'image');
-                if(user.nid_url || user.nidImage || user.docImage) {
-                    await deleteFromCloudinary(user.nid_url || user.nidImage || user.docImage, 'image');
-                }
-            }
-
-            // 2. Fetch all user posts & delete media from Cloudinary
-            const postsQuery = query(ref(db, 'posts'), orderByChild('uid'), equalTo(uid));
-            const postsSnap = await get(postsQuery);
-            const postIdsToDelete = [];
-
-            if(postsSnap.exists()) {
-                const deletePromises = [];
-                postsSnap.forEach(child => {
-                    postIdsToDelete.push(child.key);
-                    const p = child.val();
-
-                    if(p.image) deletePromises.push(deleteFromCloudinary(p.image, p.mediaType === 'video' || p.image.includes('.mp4') ? 'video' : 'image'));
-                    if(p.images && Array.isArray(p.images)) {
-                        p.images.forEach(img => {
-                            deletePromises.push(deleteFromCloudinary(img, img.includes('.mp4') ? 'video' : 'image'));
-                        });
-                    }
-                    if(p.audioUrl || p.audio || p.voice) {
-                        deletePromises.push(deleteFromCloudinary(p.audioUrl || p.audio || p.voice, 'video'));
-                    }
-                });
-                await Promise.all(deletePromises);
-            }
-
-            // 3. Delete Firebase Realtime Database Data
-            const updates = {};
-            updates[`users/${uid}`] = null;
-            updates[`user_chats/${uid}`] = null;
-            updates[`account_deletion_requests/${uid}`] = null;
-            updates[`monetization_requests/${uid}`] = null;
-            updates[`withdraw_requests/${uid}`] = null;
-            updates[`verification_requests/${uid}`] = null;
-
-            postIdsToDelete.forEach(pid => {
-                updates[`posts/${pid}`] = null;
-            });
-
-            // 4. Clean Anti-Fraud Data (Remove from registered_devices)
-            const devQuery = query(ref(db, 'registered_devices'), orderByChild('uid'), equalTo(uid));
-            const devSnap = await get(devQuery);
-            if(devSnap.exists()) {
-                devSnap.forEach(child => {
-                    updates[`registered_devices/${child.key}`] = null;
-                });
-            }
-
-            await update(ref(db), updates);
-
-            alert("একাউন্ট এবং সমস্ত ডাটা সফলভাবে মুছে ফেলা হয়েছে!");
+            const result = await purgeUserAccount({ uid, reason: 'Admin Panel permanent account deletion' });
+            alert(`একাউন্ট ও media purge সম্পন্ন হয়েছে। Records: ${result.data.deletedRecords}, Media: ${result.data.deletedMedia}`);
+            btnElement.closest('.border-red-200')?.remove();
         } catch(error) {
             console.error(error);
-            alert("ত্রুটি: " + error.message);
+            alert("Secure purge ব্যর্থ হয়েছে: " + (error.message || 'Firebase Function deploy/configuration পরীক্ষা করুন।'));
             btnElement.innerHTML = originalText;
             btnElement.disabled = false;
         }
@@ -1442,7 +1376,11 @@
             const data = snap.val() || {};
             const list = document.getElementById('list-trash');
             const badge = document.getElementById('badge-trash');
-            const items = Object.entries(data);
+            const items = [];
+            Object.entries(data).forEach(([key, value]) => {
+                if (value && value.data) items.push({ uid: value.deletedBy || value.data.uid || '', postId: key, item: value });
+                else Object.entries(value || {}).forEach(([postId, item]) => items.push({ uid: key, postId, item }));
+            });
 
             if(items.length === 0) {
                 badge.classList.add('hidden');
@@ -1453,8 +1391,10 @@
             badge.innerText = items.length;
             badge.classList.remove('hidden');
 
-            list.innerHTML = items.reverse().map(([id, item]) => {
+            list.innerHTML = items.reverse().map(({ uid, postId, item }) => {
                 const p = item.data || {};
+                const safeUid = String(uid).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                const safePostId = String(postId).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
                 let imgDisplay = '';
                 const images = p.images || (p.image ? [p.image] : []);
@@ -1477,7 +1417,7 @@
                         </div>
                         <div class="text-right">
                             <p class="text-[10px] text-gray-400">Original Post ID:</p>
-                            <p class="text-[10px] font-mono text-gray-600 truncate w-24">${id}</p>
+                            <p class="text-[10px] font-mono text-gray-600 truncate w-24">${postId}</p>
                         </div>
                     </div>
 
@@ -1490,8 +1430,8 @@
                     <p class="text-sm text-gray-600 bg-gray-50 p-2 rounded flex-1 line-clamp-3">${p.content || 'Media Post / No Text'}</p>
 
                     <div class="flex gap-2 mt-3 pt-3 border-t">
-                        <button onclick="restorePost('${id}')" class="flex-1 bg-green-50 text-green-600 py-1.5 rounded text-xs font-bold hover:bg-green-100 transition"><i class="fa-solid fa-rotate-left"></i> Restore</button>
-                        <button onclick="permanentDeleteTrash('${id}')" class="flex-1 bg-red-600 text-white py-1.5 rounded text-xs font-bold hover:bg-red-700 transition shadow-sm"><i class="fa-solid fa-trash-can"></i> Perm. Delete</button>
+                        <button onclick="restorePost('${safeUid}','${safePostId}')" class="flex-1 bg-green-50 text-green-600 py-1.5 rounded text-xs font-bold hover:bg-green-100 transition"><i class="fa-solid fa-rotate-left"></i> Restore</button>
+                        <button onclick="permanentDeleteTrash('${safeUid}','${safePostId}')" class="flex-1 bg-red-600 text-white py-1.5 rounded text-xs font-bold hover:bg-red-700 transition shadow-sm"><i class="fa-solid fa-trash-can"></i> Perm. Delete</button>
                     </div>
                 </div>`;
             }).join('');
@@ -1860,37 +1800,22 @@
     }
 
     // --- NEW: TRASH BIN FUNCTIONS ---
-    window.restorePost = async (id) => {
+    window.restorePost = async (uid, postId) => {
         try {
-            const snap = await get(ref(db, `trash_bin/${id}`));
-            if(snap.exists()) {
-                await set(ref(db, `posts/${id}`), snap.val().data);
-                await remove(ref(db, `trash_bin/${id}`));
-                alert("পোস্ট রিস্টোর করা হয়েছে!");
-            }
+            await restoreTrashPost({ uid, postId });
+            alert("পোস্ট রিস্টোর করা হয়েছে!");
         } catch(e) {
             alert("রিস্টোর করতে সমস্যা: " + e.message);
         }
     };
 
-    window.permanentDeleteTrash = async (id) => {
-        if(!confirm("পোস্টটি চিরতরে মুছবেন? Cloudinary media থাকলে secure server delete endpoint না পাওয়া পর্যন্ত deletion ব্যর্থ হবে এবং trash record রাখা হবে.")) return;
+    window.permanentDeleteTrash = async (uid, postId) => {
+        if(!confirm("পোস্টটি চিরতরে মুছবেন? Firebase record এবং Cloudinary media server-side মুছে যাবে.")) return;
         try {
-            const snap = await get(ref(db, `trash_bin/${id}`));
-            if(snap.exists()) {
-                const p = snap.val().data;
-                // Delete image logic
-                if(p.image) await deleteFromCloudinary(p.image, (p.mediaType === 'video' || p.image.includes('.mp4')) ? 'video' : 'image');
-                if(p.images && Array.isArray(p.images)) {
-                    for(let img of p.images) await deleteFromCloudinary(img, img.includes('.mp4') ? 'video' : 'image');
-                }
-                if(p.audio || p.voice || p.audioUrl) await deleteFromCloudinary(p.audio || p.voice || p.audioUrl, 'video');
-
-                await remove(ref(db, `trash_bin/${id}`));
-                alert("পোস্টটি চিরতরে মুছে ফেলা হয়েছে!");
-            }
+            const result = await purgeTrashPost({ uid, postId });
+            alert(`পোস্টটি স্থায়ীভাবে মুছে ফেলা হয়েছে। Media: ${result.data.deletedMedia}`);
         } catch(e) {
-            alert("মুছে ফেলতে সমস্যা: " + e.message);
+            alert("Secure trash deletion ব্যর্থ হয়েছে: " + e.message);
         }
     };
 
