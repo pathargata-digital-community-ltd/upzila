@@ -10,7 +10,7 @@
 
 | Account | প্রত্যাশিত ক্ষমতা |
 |---|---|
-| `admin@gmail.com` অথবা `admin: true` custom claim account | Admin Panel login, নতুন queue পড়া এবং অনুমোদিত update |
+| Firebase Auth account with `{ "admin": true }` custom claim | Admin Panel login, নতুন queue পড়া এবং অনুমোদিত update |
 | সাধারণ authenticated user | Admin Panel access প্রত্যাখ্যাত |
 | unauthenticated browser | Firebase data পড়া/লেখা প্রত্যাখ্যাত |
 | seller test account | নিজের order workflow পরিবর্তন করতে পারবে |
@@ -142,7 +142,7 @@ Cloudinary asset delete বর্তমানে server-side signed endpoint ছ
 - `stories`-এ Admin moderation write রাখা হলেও সাধারণ user অন্যের active story edit করতে পারে না।
 - `monetization_requests` ও `withdraw_requests` Admin-only read/write।
 - `super_admin_audit` read Admin-only এবং existing event immutable।
-- `auth.token.email`-ভিত্তিক পুরোনো policy থাকলে production-এ custom claim policy-তে ধীরে ধীরে migrate করা উচিত।
+- সব Admin authorization path-এ একই `auth.token.admin === true` custom-claim policy থাকতে হবে; email বা profile role fallback রাখা যাবে না।
 - Rules পরিবর্তনের পরে Emulator suite চালাতে হবে; শুধু JSON valid হওয়া যথেষ্ট নয়।
 
 ## ৯. Automated validation commands
