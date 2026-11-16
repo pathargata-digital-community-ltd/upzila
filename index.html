@@ -578,12 +578,27 @@
         <!-- SERVICES TAB -->
         <div id="tab-services" class="hidden-custom space-y-6">
             <h2 class="text-2xl font-bold text-gray-800">সেবা ম্যানেজমেন্ট (পর্যটন/শিক্ষা)</h2>
+            <div class="card border-indigo-100 bg-indigo-50 p-5">
+                <div class="mb-4"><h3 class="font-bold text-indigo-900">ক্যাটাগরি তৈরি ও পরিচালনা</h3><p class="mt-1 text-xs leading-5 text-indigo-800">নতুন service category যোগ করলে সেটি dropdown এবং Native App-এর সেবা তালিকায় দেখা যাবে। পর্যটনের built-in category মুছবেন না।</p></div>
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-[180px_1fr_1fr_auto]">
+                    <input id="service-category-id" maxlength="40" placeholder="Key (যেমন: local_help)" class="rounded-lg border bg-white p-3 font-mono text-sm">
+                    <input id="service-category-title" maxlength="60" placeholder="ক্যাটাগরির নাম (যেমন: স্থানীয় সহায়তা)" class="rounded-lg border bg-white p-3">
+                    <input id="service-category-detail" maxlength="120" placeholder="সংক্ষিপ্ত বিবরণ (ঐচ্ছিক)" class="rounded-lg border bg-white p-3">
+                    <button onclick="saveServiceCategory()" id="btn-save-service-category" class="rounded-lg bg-indigo-700 px-4 py-3 text-sm font-bold text-white hover:bg-indigo-800">ক্যাটাগরি যোগ</button>
+                </div>
+                <div id="service-category-edit-controls" class="hidden-custom mt-3"><button onclick="cancelServiceCategoryEdit()" class="rounded-lg border bg-white px-3 py-2 text-xs font-bold text-gray-600">ক্যাটাগরি সম্পাদনা বাতিল</button></div>
+                <div id="list-service-categories" class="mt-4 flex flex-wrap gap-2"><span class="text-xs text-gray-500">ক্যাটাগরি লোড হচ্ছে…</span></div>
+            </div>
             <div class="card p-6 bg-blue-50 border-blue-100">
                  <h3 class="font-bold text-blue-800 mb-4">সেবার তথ্য যুক্ত করুন</h3>
                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-gray-500 mb-1">ক্যাটাগরি</label>
-                        <select id="serv-cat-select" class="border p-3 rounded-lg w-full bg-white"></select>
+                        <select id="serv-cat-select" onchange="onServiceCategoryChange()" class="border p-3 rounded-lg w-full bg-white"><option value="">ক্যাটাগরি নির্বাচন করুন</option></select>
+                    </div>
+                    <div id="serv-tourism-category-wrap" class="hidden-custom">
+                        <label class="block text-xs font-bold text-gray-500 mb-1">পর্যটন উপ-ক্যাটাগরি</label>
+                        <select id="serv-tourism-category" class="border p-3 rounded-lg w-full bg-white"><option value="all">সব স্থান</option><option value="nature">প্রকৃতি</option><option value="history">ইতিহাস</option><option value="food_resort">খাবার ও রিসোর্ট</option><option value="culture">সংস্কৃতি</option><option value="family">পরিবার</option></select>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-500 mb-1">শিরোনাম</label>
@@ -605,8 +620,12 @@
                         <textarea id="serv-details" rows="2" placeholder="বিস্তারিত লিখুন..." class="border p-3 rounded-lg w-full"></textarea>
                     </div>
                  </div>
+                 <input type="hidden" id="service-editing-id">
+                 <input type="hidden" id="service-editing-category">
                  <button onclick="addServiceData()" id="btn-add-service" class="mt-4 w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition">সেভ করুন</button>
+                 <button onclick="cancelServiceEdit()" id="btn-cancel-service-edit" class="hidden-custom mt-2 w-full rounded-lg border border-gray-300 bg-white py-3 font-bold text-gray-700">সম্পাদনা বাতিল</button>
             </div>
+            <div class="flex flex-wrap items-center justify-between gap-2"><h3 class="font-bold text-gray-700">নির্বাচিত ক্যাটাগরির তথ্য</h3><button onclick="loadServiceItems()" class="rounded-lg border bg-white px-3 py-2 text-xs font-bold text-blue-700">রিফ্রেশ</button></div>
             <div id="list-services" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6"></div>
         </div>
 
@@ -2153,36 +2172,267 @@
         });
     };
 
+    const builtInServiceCategories = [
+        { id: 'blood', title: 'রক্তদান', detail: 'রক্তদাতা ও জরুরি অনুরোধ', icon: 'water-outline', color: '#DC2626' },
+        { id: 'emergency', title: 'জরুরি এলার্ট', detail: 'জরুরি তথ্য ও সহায়তা', icon: 'warning-outline', color: '#B91C1C' },
+        { id: 'history_tourism', title: 'পর্যটন', detail: 'ঘুরে দেখুন পাথরঘাটা', icon: 'map-outline', color: '#7C3AED' },
+        { id: 'transport', title: 'পরিবহন', detail: 'যাতায়াতের তথ্য', icon: 'bus-outline', color: '#0F766E' },
+        { id: 'education', title: 'শিক্ষা', detail: 'প্রতিষ্ঠান, টিউটর ও নোটিশ', icon: 'school-outline', color: '#CA8A04' },
+        { id: 'complaints', title: 'অভিযোগ', detail: 'নাগরিক অভিযোগ জানান', icon: 'archive-outline', color: '#DC2626' },
+        { id: 'market', title: 'হাট', detail: 'স্থানীয় কেনাবেচা', icon: 'storefront-outline', color: '#EA580C' },
+        { id: 'birth_reg', title: 'জন্ম নিবন্ধন', detail: 'অনলাইন সরকারি সেবা', icon: 'card-outline', color: '#2563EB' },
+        { id: 'tin_cert', title: 'টিন সার্টিফিকেট', detail: 'ট্যাক্স সংক্রান্ত সেবা', icon: 'document-text-outline', color: '#4F46E5' },
+        { id: 'agriculture', title: 'কৃষি', detail: 'কৃষি তথ্য ও সহায়তা', icon: 'leaf-outline', color: '#16A34A' },
+        { id: 'result', title: 'বোর্ড রেজাল্ট', detail: 'শিক্ষা ফলাফল দেখুন', icon: 'ribbon-outline', color: '#DB2777' }
+    ];
+    const builtInServiceCategoryIds = new Set(builtInServiceCategories.map(item => item.id));
+    const hiddenServiceCategoryIds = new Set(['directory', 'verification', 'profile_verification', 'invite', 'invite_parent', 'crazy']);
+    const tourismSubcategoryLabels = { all: 'সব স্থান', nature: 'প্রকৃতি', history: 'ইতিহাস', food_resort: 'খাবার ও রিসোর্ট', culture: 'সংস্কৃতি', family: 'পরিবার' };
+    let serviceCategoryCatalog = new Map();
+    let remoteServiceCategories = {};
+    let editingServiceCategoryId = '';
+    let serviceCategoryRequestVersion = 0;
+    let serviceItemsRequestVersion = 0;
+
+    window.loadServiceCategories = async (preferredCategory = '') => {
+        const select = document.getElementById('serv-cat-select');
+        const list = document.getElementById('list-service-categories');
+        if (!select || !list) return;
+        const requestVersion = ++serviceCategoryRequestVersion;
+        const selectedBeforeLoad = preferredCategory || select.value || 'history_tourism';
+        let readError = null;
+        let loadedRemoteCategories = {};
+        try {
+            const snapshot = await get(ref(db, 'services/categories'));
+            const value = snapshot.val();
+            loadedRemoteCategories = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+        } catch (error) {
+            readError = error;
+        }
+        if (requestVersion !== serviceCategoryRequestVersion) return;
+        remoteServiceCategories = loadedRemoteCategories;
+
+        serviceCategoryCatalog = new Map(builtInServiceCategories.map(item => [item.id, { ...item, builtIn: true, remote: false }]));
+        Object.entries(remoteServiceCategories).forEach(([id, value]) => {
+            if (!/^[a-z][a-z0-9_]{0,39}$/.test(id) || hiddenServiceCategoryIds.has(id.toLowerCase())) return;
+            const fallback = serviceCategoryCatalog.get(id);
+            const row = typeof value === 'string' ? { title: value } : (value && typeof value === 'object' ? value : {});
+            const title = String(row.title || row.name || fallback?.title || id).trim();
+            if (!title || title.toLowerCase() === 'crazy') return;
+            serviceCategoryCatalog.set(id, {
+                ...(fallback || {}), id, title,
+                detail: String(row.detail || fallback?.detail || 'স্থানীয় সেবা ও তথ্য'),
+                icon: String(row.icon || fallback?.icon || 'grid-outline'),
+                color: String(row.color || fallback?.color || '#15803D'),
+                builtIn: builtInServiceCategoryIds.has(id), remote: true
+            });
+        });
+
+        const categories = Array.from(serviceCategoryCatalog.values()).sort((a, b) => {
+            const aIndex = builtInServiceCategories.findIndex(item => item.id === a.id);
+            const bIndex = builtInServiceCategories.findIndex(item => item.id === b.id);
+            if (aIndex >= 0 || bIndex >= 0) return (aIndex < 0 ? 999 : aIndex) - (bIndex < 0 ? 999 : bIndex);
+            return a.title.localeCompare(b.title, 'bn-BD');
+        });
+        const selectedAfterRead = preferredCategory || select.value || selectedBeforeLoad;
+        select.innerHTML = '<option value="">ক্যাটাগরি নির্বাচন করুন</option>' + categories.map(item => `<option value="${escapeHTML(item.id)}">${escapeHTML(item.title)} · ${escapeHTML(item.id)}</option>`).join('');
+        select.value = serviceCategoryCatalog.has(selectedAfterRead) ? selectedAfterRead : (serviceCategoryCatalog.has('history_tourism') ? 'history_tourism' : '');
+
+        list.innerHTML = categories.map(item => `<div class="flex items-center gap-2 rounded-full border ${item.builtIn ? 'border-blue-100 bg-blue-50' : 'border-indigo-100 bg-white'} px-3 py-2"><span class="text-xs font-bold text-gray-800">${escapeHTML(item.title)}</span><code class="text-[10px] text-gray-500">${escapeHTML(item.id)}</code><span class="text-[9px] font-bold ${item.builtIn ? 'text-blue-700' : 'text-indigo-700'}">${item.builtIn ? 'মূল' : 'কাস্টম'}</span><button data-id="${escapeHTML(item.id)}" onclick="editServiceCategory(this.dataset.id)" class="rounded-md bg-white px-2 py-1 text-[10px] font-bold text-blue-700 shadow-sm">সম্পাদনা</button>${item.builtIn ? '' : `<button data-id="${escapeHTML(item.id)}" onclick="deleteServiceCategory(this.dataset.id)" class="rounded-md bg-white px-2 py-1 text-[10px] font-bold text-red-600 shadow-sm">মুছুন</button>`}</div>`).join('') || '<span class="text-xs text-gray-500">কোনো ক্যাটাগরি নেই।</span>';
+        if (readError) list.insertAdjacentHTML('beforeend', '<p class="w-full text-xs text-amber-700">Firebase category পড়া যায়নি; built-in ক্যাটাগরিগুলো দেখানো হয়েছে। Admin claim ও rules যাচাই করুন।</p>');
+        window.onServiceCategoryChange();
+    };
+
+    window.saveServiceCategory = async () => {
+        const idInput = document.getElementById('service-category-id');
+        const id = editingServiceCategoryId || idInput.value.trim().toLowerCase();
+        const wasEditing = Boolean(editingServiceCategoryId);
+        const title = document.getElementById('service-category-title').value.trim();
+        const detail = document.getElementById('service-category-detail').value.trim();
+        if (!/^[a-z][a-z0-9_]{0,39}$/.test(id)) return alert('ক্যাটাগরি key ইংরেজি ছোট হাতের অক্ষর দিয়ে শুরু হবে; শুধু a-z, 0-9 ও underscore ব্যবহার করুন।');
+        if (hiddenServiceCategoryIds.has(id)) return alert('এই সংরক্ষিত category key ব্যবহার করা যাবে না।');
+        if (!title) return alert('ক্যাটাগরির প্রদর্শন-নাম লিখুন।');
+        if (!editingServiceCategoryId && serviceCategoryCatalog.has(id)) return alert('এই category key আগে থেকেই আছে। অন্য key দিন।');
+        const button = document.getElementById('btn-save-service-category');
+        const before = button.innerHTML;
+        button.disabled = true;
+        button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> সেভ হচ্ছে...';
+        try {
+            const current = remoteServiceCategories[id] && typeof remoteServiceCategories[id] === 'object' ? remoteServiceCategories[id] : {};
+            const fallback = serviceCategoryCatalog.get(id) || {};
+            await set(ref(db, `services/categories/${id}`), {
+                title, detail,
+                icon: String(current.icon || fallback.icon || 'grid-outline'),
+                color: String(current.color || fallback.color || '#15803D')
+            });
+            window.cancelServiceCategoryEdit();
+            await window.loadServiceCategories(id);
+            alert(wasEditing ? 'ক্যাটাগরি আপডেট হয়েছে।' : 'ক্যাটাগরি তৈরি হয়েছে; এখন service form-এ নির্বাচন করতে পারবেন।');
+        } catch (error) {
+            alert('ক্যাটাগরি সেভ হয়নি: ' + (error.message || 'Firebase permission যাচাই করুন।'));
+        } finally {
+            button.innerHTML = before;
+            button.disabled = false;
+        }
+    };
+
+    window.editServiceCategory = (id) => {
+        const item = serviceCategoryCatalog.get(id);
+        if (!item) return alert('ক্যাটাগরিটি পাওয়া যায়নি। তালিকা refresh করে আবার চেষ্টা করুন।');
+        editingServiceCategoryId = id;
+        document.getElementById('service-category-id').value = id;
+        document.getElementById('service-category-id').readOnly = true;
+        document.getElementById('service-category-title').value = item.title;
+        document.getElementById('service-category-detail').value = item.detail || '';
+        document.getElementById('btn-save-service-category').textContent = 'ক্যাটাগরি আপডেট';
+        document.getElementById('service-category-edit-controls').classList.remove('hidden-custom');
+        document.getElementById('service-category-id').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
+
+    window.cancelServiceCategoryEdit = () => {
+        editingServiceCategoryId = '';
+        document.getElementById('service-category-id').value = '';
+        document.getElementById('service-category-id').readOnly = false;
+        document.getElementById('service-category-title').value = '';
+        document.getElementById('service-category-detail').value = '';
+        document.getElementById('btn-save-service-category').textContent = 'ক্যাটাগরি যোগ';
+        document.getElementById('service-category-edit-controls').classList.add('hidden-custom');
+    };
+
+    window.deleteServiceCategory = async (id) => {
+        if (builtInServiceCategoryIds.has(id)) return alert('Native App-এর built-in category মুছতে পারবেন না।');
+        try {
+            const dataSnapshot = await get(ref(db, `services/data/${id}`));
+            const data = dataSnapshot.val();
+            const count = !dataSnapshot.exists() ? 0 : (data && typeof data === 'object' ? Object.keys(data).length : 1);
+            if (count) return alert(`এই category-তে ${count}টি service তথ্য আছে। আগে তথ্যগুলো edit/delete করুন; data থাকলে category মুছতে দেওয়া হবে না।`);
+            if (!confirm(`“${serviceCategoryCatalog.get(id)?.title || id}” category মুছে ফেলবেন?`)) return;
+            await remove(ref(db, `services/categories/${id}`));
+            await window.loadServiceCategories('history_tourism');
+            alert('ক্যাটাগরি মুছে ফেলা হয়েছে।');
+        } catch (error) {
+            alert('ক্যাটাগরি মুছতে পারিনি: ' + (error.message || 'Firebase permission যাচাই করুন।'));
+        }
+    };
+
+    window.onServiceCategoryChange = () => {
+        const category = document.getElementById('serv-cat-select')?.value || '';
+        document.getElementById('serv-tourism-category-wrap')?.classList.toggle('hidden-custom', category !== 'history_tourism');
+        if (category) void window.loadServiceItems();
+        else document.getElementById('list-services').innerHTML = '<p class="col-span-2 rounded-xl bg-white p-5 text-center text-sm text-gray-500">প্রথমে একটি category নির্বাচন করুন।</p>';
+    };
+
+    window.loadServiceItems = async () => {
+        const category = document.getElementById('serv-cat-select')?.value || '';
+        const list = document.getElementById('list-services');
+        if (!list) return;
+        const requestVersion = ++serviceItemsRequestVersion;
+        if (!category) { list.innerHTML = '<p class="col-span-2 rounded-xl bg-white p-5 text-center text-sm text-gray-500">প্রথমে একটি category নির্বাচন করুন।</p>'; return; }
+        list.innerHTML = '<p class="col-span-2 py-6 text-center text-sm text-gray-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i>তথ্য লোড হচ্ছে…</p>';
+        try {
+            const snapshot = await get(ref(db, `services/data/${category}`));
+            if (requestVersion !== serviceItemsRequestVersion || document.getElementById('serv-cat-select')?.value !== category) return;
+            const records = snapshot.exists() ? snapshot.val() : {};
+            const rows = records && typeof records === 'object' ? Object.entries(records).filter(([, item]) => item && typeof item === 'object') : [];
+            if (!rows.length) { list.innerHTML = '<p class="col-span-2 rounded-xl bg-white p-6 text-center text-sm text-gray-500">এই category-তে এখনো কোনো তথ্য যোগ করা হয়নি।</p>'; return; }
+            const categoryTitle = serviceCategoryCatalog.get(category)?.title || category;
+            list.innerHTML = rows.map(([id, item]) => {
+                const image = safeMediaUrl(item.image || item.photo || '');
+                const subcategory = category === 'history_tourism' ? (tourismSubcategoryLabels[item.category] || tourismSubcategoryLabels.all) : '';
+                return `<article class="card overflow-hidden p-4"><div class="flex items-start gap-3">${image ? `<img src="${image}" alt="${escapeHTML(item.title || item.name || 'সেবার ছবি')}" loading="lazy" class="h-20 w-20 shrink-0 rounded-xl border object-cover">` : '<div class="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-2xl text-blue-300"><i class="fa-solid fa-map-location-dot"></i></div>'}<div class="min-w-0 flex-1"><div class="flex flex-wrap items-center gap-2"><span class="rounded-full bg-blue-50 px-2 py-1 text-[10px] font-bold text-blue-700">${escapeHTML(categoryTitle)}</span>${subcategory ? `<span class="rounded-full bg-purple-50 px-2 py-1 text-[10px] font-bold text-purple-700">${escapeHTML(subcategory)}</span>` : ''}</div><h4 class="mt-2 break-words font-bold text-gray-800">${escapeHTML(item.title || item.name || 'সেবার তথ্য')}</h4><p class="mt-1 whitespace-pre-wrap break-words text-xs leading-5 text-gray-600">${escapeHTML(item.details || item.description || 'বিবরণ নেই')}</p><p class="mt-1 text-xs font-bold text-blue-700">${escapeHTML(item.phone || '')}</p></div></div><div class="mt-3 flex gap-2 border-t pt-3"><button data-category="${escapeHTML(category)}" data-id="${escapeHTML(id)}" onclick="editServiceData(this.dataset.category,this.dataset.id)" class="rounded-lg bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700"><i class="fa-solid fa-pen mr-1"></i>এডিট</button><button data-category="${escapeHTML(category)}" data-id="${escapeHTML(id)}" onclick="deleteServiceData(this.dataset.category,this.dataset.id)" class="rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-600"><i class="fa-solid fa-trash mr-1"></i>মুছুন</button></div></article>`;
+            }).join('');
+        } catch (error) {
+            if (requestVersion !== serviceItemsRequestVersion || document.getElementById('serv-cat-select')?.value !== category) return;
+            list.innerHTML = '<p class="col-span-2 rounded-xl bg-red-50 p-5 text-center text-sm text-red-700">তথ্য লোড হয়নি। Admin claim, internet এবং Firebase rules পরীক্ষা করুন।</p>';
+            console.error('Service data load failed:', error);
+        }
+    };
+
+    window.editServiceData = async (category, id) => {
+        try {
+            const snapshot = await get(ref(db, `services/data/${category}/${id}`));
+            if (!snapshot.exists()) return alert('এই service তথ্যটি আর পাওয়া যাচ্ছে না। তালিকা refresh করুন।');
+            const item = snapshot.val() || {};
+            if (!serviceCategoryCatalog.has(category)) await window.loadServiceCategories(category);
+            document.getElementById('serv-cat-select').value = category;
+            document.getElementById('serv-cat-select').disabled = true;
+            document.getElementById('service-editing-id').value = id;
+            document.getElementById('service-editing-category').value = category;
+            document.getElementById('serv-title').value = String(item.title || item.name || '');
+            document.getElementById('serv-phone').value = String(item.phone || '');
+            document.getElementById('serv-details').value = String(item.details || item.description || '');
+            document.getElementById('serv-img').value = String(item.image || item.photo || '');
+            document.getElementById('serv-img-file').value = '';
+            document.getElementById('serv-tourism-category').value = tourismSubcategoryLabels[item.category] ? item.category : 'all';
+            document.getElementById('serv-tourism-category-wrap').classList.toggle('hidden-custom', category !== 'history_tourism');
+            document.getElementById('btn-add-service').textContent = 'আপডেট করুন';
+            document.getElementById('btn-cancel-service-edit').classList.remove('hidden-custom');
+            document.getElementById('serv-title').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } catch (error) {
+            alert('Service তথ্য খোলা যায়নি: ' + (error.message || 'আবার চেষ্টা করুন।'));
+        }
+    };
+
+    window.cancelServiceEdit = () => {
+        document.getElementById('service-editing-id').value = '';
+        document.getElementById('service-editing-category').value = '';
+        document.getElementById('serv-cat-select').disabled = false;
+        document.getElementById('serv-title').value = '';
+        document.getElementById('serv-phone').value = '';
+        document.getElementById('serv-details').value = '';
+        document.getElementById('serv-img').value = '';
+        document.getElementById('serv-img-file').value = '';
+        document.getElementById('serv-tourism-category').value = 'all';
+        document.getElementById('btn-add-service').textContent = 'সেভ করুন';
+        document.getElementById('btn-cancel-service-edit').classList.add('hidden-custom');
+        window.onServiceCategoryChange();
+    };
+
+    window.deleteServiceData = async (category, id) => {
+        if (!confirm('এই service/tourism তথ্যটি স্থায়ীভাবে মুছে ফেলবেন?')) return;
+        try {
+            await remove(ref(db, `services/data/${category}/${id}`));
+            if (document.getElementById('service-editing-id').value === id) window.cancelServiceEdit();
+            await window.loadServiceItems();
+            alert('তথ্য মুছে ফেলা হয়েছে।');
+        } catch (error) {
+            alert('তথ্য মুছতে পারিনি: ' + (error.message || 'Firebase permission যাচাই করুন।'));
+        }
+    };
+
     window.addServiceData = async () => {
-        const cat = document.getElementById('serv-cat-select').value;
+        const select = document.getElementById('serv-cat-select');
+        const editingId = document.getElementById('service-editing-id').value;
+        const category = editingId ? document.getElementById('service-editing-category').value : select.value;
+        const isEditing = Boolean(editingId);
         const title = document.getElementById('serv-title').value.trim();
         const phone = document.getElementById('serv-phone').value.trim();
         const details = document.getElementById('serv-details').value.trim();
         const file = document.getElementById('serv-img-file').files[0];
         const urlInput = document.getElementById('serv-img').value.trim();
+        if (!category || !serviceCategoryCatalog.has(category) || !title) return alert('ক্যাটাগরি নির্বাচন এবং শিরোনাম দেওয়া বাধ্যতামূলক।');
 
-        if(!cat || !title) return alert("ক্যাটাগরি এবং শিরোনাম দেওয়া বাধ্যতামূলক");
-
-        const btn = document.getElementById('btn-add-service');
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> সেভ হচ্ছে...';
-        btn.disabled = true;
-
+        const button = document.getElementById('btn-add-service');
+        button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> সেভ হচ্ছে...';
+        button.disabled = true;
         try {
             let image = urlInput;
-            if(file) { image = await uploadMediaToCloudinary(file); }
-
-            await push(ref(db, `services/data/${cat}`), { title, phone, details, image });
-            alert("সেবার তথ্য সেভ হয়েছে!");
-
-            document.getElementById('serv-title').value = "";
-            document.getElementById('serv-phone').value = "";
-            document.getElementById('serv-details').value = "";
-            document.getElementById('serv-img-file').value = "";
-        } catch(e) {
-            alert("ত্রুটি: " + e.message);
+            if (file) {
+                image = await uploadMediaToCloudinary(file);
+                if (!image) throw new Error('নতুন ছবি আপলোড হয়নি; আগের ছবি/রেকর্ড অপরিবর্তিত রাখা হয়েছে।');
+            }
+            const payload = { title, phone, details, image, updatedAt: Date.now() };
+            if (category === 'history_tourism') payload.category = document.getElementById('serv-tourism-category').value || 'all';
+            if (editingId) await update(ref(db, `services/data/${category}/${editingId}`), payload);
+            else await push(ref(db, `services/data/${category}`), payload);
+            window.cancelServiceEdit();
+            await window.loadServiceItems();
+            alert(editingId ? 'তথ্য আপডেট হয়েছে।' : 'সেবার তথ্য সেভ হয়েছে!');
+        } catch (error) {
+            alert('তথ্য সেভ হয়নি: ' + (error.message || 'Firebase permission যাচাই করুন।'));
         } finally {
-            btn.innerHTML = "সেভ করুন";
-            btn.disabled = false;
+            button.innerHTML = isEditing && document.getElementById('service-editing-id').value ? 'আপডেট করুন' : 'সেভ করুন';
+            button.disabled = false;
         }
     };
 
@@ -3017,6 +3267,7 @@
                 targetMenu.classList.add('active', 'bg-green-100', 'text-green-700');
             }
         }
+        if (id === 'services' && typeof window.loadServiceCategories === 'function') void window.loadServiceCategories();
     }
 </script>
 
