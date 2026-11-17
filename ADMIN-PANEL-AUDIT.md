@@ -16,7 +16,7 @@
 | 10 | Transport | রাখা | Native routes-এর সঙ্গে মিলে বাস, rent-a-car ও transport-banner workflow রাখা হয়েছে। |
 | 11 | Directory | রাখা | app `directory/{category}` ব্যবহার করে; `directory_edits` ও `directory_reviews`-ও রাখা হয়েছে। |
 | 12 | Marketplace | রাখা ও উন্নত | app-এর `market_items`, `market_shops`, `market_orders` contracts যাচাই করা হয়েছে। পণ্য ও দোকানের পৃথক moderation view, দোকান যাচাই/ব্যাজ প্রত্যাহার ও listing অপসারণ যোগ হয়েছে। Admin list indexed `time` query-তে সাম্প্রতিক সর্বোচ্চ ২০০টি করে দেখায়; private buyer/seller order data তালিকায় ছড়ানো হয়নি। |
-| 13 | Blood service | রাখা | donor consent-aware handling এবং private blood request queue রাখা হয়েছে; donor phone public projection-এ কপি করা হয় না। |
+| 13 | Blood service | রাখা ও সম্প্রসারণ | donor consent-aware handling এবং private blood request queue রাখা হয়েছে; donor phone public projection-এ কপি করা হয় না। `রক্ত সেবা → Operator আবেদন` tab-এ `blood_partner_access_requests`-এর অপেক্ষমাণ আবেদন দেখা যায়; শুধু `admin: true` claim থাকা Admin approve/reject করতে পারেন। Approve করলে `blood_partner_access/{uid}`-এ `blood_operator` membership তৈরি হয়—Admin claim নয়। |
 | 14 | Emergency alerts | রাখা | `emergency_alerts` এবং `emergency_alert_private` পৃথকভাবে বিবেচনা; সংবেদনশীল যোগাযোগের তথ্য public ধরে নেওয়া হয়নি। |
 | 15 | User tracking logs | সরানো | app-এ বর্তমান use case নেই। Panel-এর tracking listener, UI/helper ও read সরানো; ইতিহাস মুছিনি। |
 | 16 | All users | রাখা ও নিরাপদ করা | profile `role`-কে admin authority হিসেবে দেখানো/সম্পাদনা বাদ। Admin কেবল Firebase Auth-এর `admin: true` custom claim; user status থেকে নিরাপদ suspend/reactivate action যোগ। সাধারণ user list থেকে সরাসরি profile delete বাদ; deletion request queue রাখা। |
@@ -34,14 +34,14 @@
 
 ## নিরাপত্তা ও deployment নোট
 
-- অডিটে `app/area-approval.tsx` `area_access_requests/{uid}`-এ আবেদন লেখে দেখা গেছে, কিন্তু `database.rules.json`-এ এই path-এর কোনো rule ছিল না। নতুন rule-এ app owner শুধু নিজের pending request তৈরি/পুনরায় জমা দিতে পারবেন; কেবল `auth.token.admin === true` queue পড়তে/সিদ্ধান্ত নিতে পারবেন। NID URL-ও Cloudinary HTTPS URL হিসেবে validate হয়। Native App submit flow-তে profile-এর protected gate fields আর client থেকে পরিবর্তন হয় না—শুধু নিজের NID URL ও request queue atomicভাবে লেখা হয়।
-- নতুন RTDB rule এই repository-তে যোগ হয়েছে, কিন্তু Firebase project-এ deploy করা হয়নি। Rules deploy না হওয়া পর্যন্ত নতুন NID queue panel/app-এ কার্যকর হবে না এবং আবেদন submission permission denied হতে পারে।
+- `database.rules.json`-এর বর্তমান Native-App version-এ `area_access_requests/{uid}`-এর applicant/admin authorization এবং `blood_partner_access_requests`/`blood_partner_access`-এর admin-only management rules আছে। Native App submit flow-তে profile-এর protected gate fields client থেকে পরিবর্তন হয় না—শুধু নিজের NID URL ও request queue atomicভাবে লেখা হয়।
+- ব্যবহারকারী Firebase Console-এ Rules ম্যানুয়ালি আপডেট করেছেন বলে জানিয়েছেন। লাইভ Firebase Rules এই repository-র tested version-এর সঙ্গে মেলে কি না Console-এ যাচাই করতে হবে; Rules deploy ও GitHub Pages code deploy আলাদা অপারেশন।
 - Panel-এর ১৮টি navigation target-এর প্রতিটির matching tab আছে; বাদ দেওয়া UI থেকে কোনো Firebase data bulk-delete করা হয়নি।
 - Cloudinary upload client-এর unsigned preset ব্যবহার করে; trusted server-side delete/destroy endpoint app বা panel source-এ পাওয়া যায়নি। তাই trashed post-এর Cloudinary file auto-delete হবে না।
 - Native app source-এ OneSignal integration পাওয়া যায়নি; deleted panel handler key revoke/rotate করেনি। Cloudinary deletion endpoint বা OneSignal key rotation হয়নি—এগুলো আলাদা server/account-side কাজ।
-- Firebase rules file ও panel source repo-তে থাকা পরিবর্তন; GitHub Pages push এবং Firebase live rules deployment আলাদা অপারেশন।
-
-- Local Firebase RTDB emulator test: ১৯টি test file-এর ১০৮টি test পাস করেছে, নতুন area-access owner/admin authorization tests-সহ।
+- Blood operator application UI indexed `status='pending'` query ব্যবহার করে; এটি অপেক্ষমাণ আবেদন ছাড়া approved/rejected records বা তাদের ব্যক্তিগত contact details fetch করে না। প্রতিটি submission-এর `revisionId` আলাদা; Admin action displayed revision-এর সঙ্গে বর্তমান record মিলিয়ে transaction lock নেয়, তাই stale card নতুন resubmission-এ কাজ করতে পারে না। পুরোনো pending entry-কে প্রথম owner lock `legacy:{requestedAt}` revision দিয়ে migrate করে। Lock থাকলে বিপরীত সিদ্ধান্ত নিষ্ক্রিয়, একই সিদ্ধান্ত retry/resume করা যায়। Approval-এ membership, final request status এবং actor/time-সহ audit event এক atomic multi-location update; rejection-এ status/audit atomicভাবে লেখা হয়।
+- Firebase rules file ও panel source repo-তে থাকা পরিবর্তন; GitHub Pages push এবং Firebase live rules deployment আলাদা অপারেশন। Live Rules-এ একই admin-claim policy কার্যকর কি না Firebase Console-এ যাচাই করতে হবে।
+- Local Firebase RTDB emulator test: সর্বশেষ যাচাইয়ে ২২টি test file-এর ১৩৬টি test পাস করেছে, blood partner owner/admin authorization tests-সহ।
 - Native App TypeScript check (`pnpm run check`) সফল হয়েছে।
 - Lock screen-এর Admin Contact: বিদ্যমান WhatsApp link অক্ষত রেখে Settings-এ Telegram link যোগ করা হয়েছে; Native App কেবল অনুমোদিত domain-এর HTTPS link-ই খোলে।
 

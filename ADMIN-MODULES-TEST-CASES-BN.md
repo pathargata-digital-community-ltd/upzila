@@ -35,7 +35,7 @@ Firebase Console-এ Rules কপি করার আগে emulator-এ চা�
 |---|---|---|---|
 | SM-01 | Admin login | Admin email/password দিয়ে login করুন | Dashboard খুলবে; login overlay চলে যাবে |
 | SM-02 | Non-admin login | সাধারণ user দিয়ে login করুন | Admin claim না থাকায় Panel access বন্ধ হবে |
-| SM-03 | Sidebar navigation | Orders, Feedback, Stories, Finance, Audit menu একে একে চাপুন | প্রতিটি tab খুলবে; অন্য tab hidden থাকবে |
+| SM-03 | Sidebar navigation | Orders, Feedback, Stories, Finance, Audit এবং Blood Service → Operator আবেদন menu একে একে চাপুন | প্রতিটি tab খুলবে; অন্য tab hidden থাকবে; pending operator application badge-এ দেখা যাবে |
 | SM-04 | Refresh persistence | Admin login-এর পর browser refresh করুন | Firebase Auth session থাকলে Panel আবার খুলবে |
 | SM-05 | Mobile layout | 360–430px viewport-এ menu খুলুন | Sidebar overlay, tab content এবং buttons কাটা যাবে না |
 | SM-06 | Empty state | কোনো test data না রেখে নতুন tab খুলুন | “কোনো record পাওয়া যায়নি” ধরনের safe empty state দেখাবে |
@@ -165,7 +165,7 @@ python3 -m json.tool database.rules.json >/dev/null
 pnpm test:rules
 ```
 
-বর্তমান baseline হিসেবে Rules suite-এ ১৯টি test file এবং ১১৬টি test pass করেছে। নতুন order Admin permission-এর জন্য আলাদা test যোগ করা হলে অন্তত এগুলো আবশ্যক:
+বর্তমান baseline হিসেবে Rules suite-এ ২২টি test file এবং ১৩৬টি test pass করেছে। নতুন order Admin permission-এর জন্য আলাদা test যোগ করা হলে অন্তত এগুলো আবশ্যক:
 
 ```text
 admin can read market_orders root
@@ -187,3 +187,20 @@ Release-ready বলা যাবে কেবল তখনই যখন:
 6. Firebase Console-এর live Rules repository version-এর সঙ্গে মিলে যায়।
 7. Cloudinary signed delete endpoint ছাড়া কোনো destructive media delete চালু করা হয় না।
 8. Production test করার আগে test records backup ও cleanup করা হয়।
+9. Blood Service → Operator আবেদন tab indexed query দিয়ে শুধু pending request আনে; প্রতিটি submission-এর নতুন `revisionId` থাকে এবং Admin-এর displayed revision বর্তমান request-এর সঙ্গে মিললেই approve/reject lock নেয়। Approval-এ `blood_partner_access/{uid}`-এ `blood_operator` ও `pathargata_all` membership, request status/review metadata এবং audit event একই atomic multi-location update-এ লেখা হয়; rejection-এ request status/review metadata ও audit event atomicভাবে লেখা হয়। বিপরীত সিদ্ধান্ত lock থাকলে সফল হয় না, একই সিদ্ধান্ত retry করা যায়, stale card নতুন আবেদন বদলাতে পারে না, rejection-এর পরে applicant নতুন revision-এ পুনরায় আবেদন করতে পারে, এবং কাউকে `admin: true` claim দেওয়া হয় না।
+
+## Blood operator application review — Admin panel smoke tests
+
+| ID | Test | ধাপ | Expected result |
+|---|---|---|---|
+| BLOOD-APP-01 | Navigation | Admin login করে Sidebar → রক্ত সেবা → Operator আবেদন খুলুন | আবেদন tab ও pending-count badge দেখা যায়; area/NID review-এর সঙ্গে গুলিয়ে যায় না |
+| BLOOD-APP-02 | Pending-only queue | pending ও approved request রাখুন | Indexed query শুধু `status=pending` আবেদন আনে; সংস্থার নাম, আবেদনকারীর নাম, ইমেইল, ফোন, সময় ও UID নিরাপদভাবে escape হয়ে দেখায় |
+| BLOOD-APP-03 | Approve | আবেদন যাচাই করে অনুমোদন চাপুন | card-এর `revisionId` বর্তমান record-এর সঙ্গে মিলিয়ে lock নেয়; membership `role=blood_operator`, `scope=pathargata_all`, `active=true`, approved review metadata ও audit এক atomic update-এ লেখা হয় |
+| BLOOD-APP-04 | Reject | pending আবেদন প্রত্যাখ্যান করুন | lock-সহ rejection status/review metadata/audit atomicভাবে লেখা হয়; operator membership তৈরি হয় না; applicant পরে আবার আবেদন করতে পারে |
+| BLOOD-APP-05 | Competing decision | একটি Admin approve lock নেওয়ার পর অন্য Admin reject চাপুন | বিপরীত বাটন disabled থাকে এবং rules-ও conflicting সিদ্ধান্ত প্রত্যাখ্যান করে |
+| BLOOD-APP-06 | Permission denied | Firebase Rules-এ Admin read permission না রেখে queue load করুন | অনুমতি-সংক্রান্ত error ও retry control দেখায়; খালি তালিকা বলে ভুল দেখায় না |
+| BLOOD-APP-07 | Non-admin | সাধারণ user account দিয়ে UI action trigger করার চেষ্টা করুন | custom claim gate UI access বন্ধ করে; Firebase Rules request/membership-এ write reject করে |
+| BLOOD-APP-08 | Resume same decision | write failure/refresh-এর পরে card-এ আগের lock দেখা গেলে একই সিদ্ধান্ত চাপুন | একই সিদ্ধান্তের retry/resume চলে; বিপরীত সিদ্ধান্ত বেছে নেওয়া যায় না |
+| BLOOD-APP-09 | Stale card | revision-1 আবেদন reject হওয়ার পরে একই UID revision-2 দিয়ে আবেদন করুক; revision-1 খোলা card থেকে সিদ্ধান্ত দিন | transaction revision mismatch-এ abort হয়; revision-2 pending থাকে, কোনো membership/audit decision তৈরি হয় না এবং Admin-কে তালিকা refresh করতে বলা হয় |
+
+Admin panel path: **Sidebar → রক্ত সেবা → Operator আবেদন**. **“এলাকা প্রবেশ অনুমোদন”** হলো NID/location review-এর tab; blood operator application সেখানে নয়।

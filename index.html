@@ -122,7 +122,7 @@
             <div onclick="switchTab('stories')" id="menu-stories" class="sidebar-item p-3 cursor-pointer flex items-center gap-3"><i class="fa-solid fa-circle-play w-5 text-center"></i><span class="menu-text">স্টোরি মডারেশন</span></div>
             <div onclick="switchTab('finance')" id="menu-finance" class="sidebar-item p-3 cursor-pointer flex items-center gap-3"><i class="fa-solid fa-wallet w-5 text-center"></i><span class="menu-text">মনিটাইজেশন</span></div>
             <div onclick="switchTab('audit')" id="menu-audit" class="sidebar-item p-3 cursor-pointer flex items-center gap-3"><i class="fa-solid fa-shield-halved w-5 text-center"></i><span class="menu-text">অডিট লগ</span></div>
-            <div onclick="switchTab('blood')" id="menu-blood" class="sidebar-item p-3 cursor-pointer flex items-center gap-3"><i class="fa-solid fa-heart-pulse w-5 text-center"></i><span class="menu-text">রক্ত সেবা</span></div>
+            <div onclick="switchTab('blood')" id="menu-blood" class="sidebar-item p-3 cursor-pointer flex items-center gap-3 relative"><i class="fa-solid fa-heart-pulse w-5 text-center"></i><span class="menu-text">রক্ত সেবা</span><span id="badge-blood-operators" class="hidden absolute right-2 bg-red-500 text-white text-[10px] px-1.5 rounded-full">0</span></div>
             <div onclick="switchTab('emergency')" id="menu-emergency" class="sidebar-item p-3 cursor-pointer flex items-center gap-3"><i class="fa-solid fa-bell w-5 text-center"></i><span class="menu-text">জরুরি এলার্ট</span></div>
             <div onclick="switchTab('complaints')" id="menu-complaints" class="sidebar-item p-3 cursor-pointer flex items-center gap-3"><i class="fa-solid fa-inbox w-5 text-center"></i><span class="menu-text">নাগরিক অভিযোগ</span></div>
             <div onclick="switchTab('services')" id="menu-services" class="sidebar-item p-3 cursor-pointer flex items-center gap-3"><i class="fa-solid fa-layer-group w-5 text-center"></i><span class="menu-text">পর্যটন ও শিক্ষা</span></div>
@@ -558,11 +558,12 @@
         <div id="tab-blood" class="hidden-custom space-y-6">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div><h2 class="text-2xl font-bold text-red-600">রক্ত সেবা ব্যবস্থাপনা</h2><p class="mt-1 text-sm text-gray-500">Native App-এর donor projection ও private request queue</p></div>
-                <div class="flex gap-2"><button onclick="switchBloodTab('requests')" id="btn-blood-requests" class="rounded-lg border border-red-200 bg-red-600 px-4 py-2 text-sm font-bold text-white">রিকোয়েস্ট <span id="badge-blood-requests" class="ml-1 rounded-full bg-white/20 px-2">0</span></button><button onclick="switchBloodTab('donors')" id="btn-blood-donors" class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-bold text-gray-700">ডোনার</button></div>
+                <div class="flex flex-wrap gap-2"><button onclick="switchBloodTab('requests')" id="btn-blood-requests" class="rounded-lg border border-red-200 bg-red-600 px-3 py-2 text-sm font-bold text-white">রিকোয়েস্ট <span id="badge-blood-requests" class="ml-1 rounded-full bg-white/20 px-2">0</span></button><button onclick="switchBloodTab('donors')" id="btn-blood-donors" class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-bold text-gray-700">ডোনার</button><button onclick="switchBloodTab('applications')" id="btn-blood-applications" class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-bold text-gray-700">Operator আবেদন <span id="badge-blood-operator-applications" class="ml-1 hidden rounded-full bg-red-100 px-2 text-red-700">0</span></button></div>
             </div>
             <p class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">রক্তের রিকোয়েস্টের যোগাযোগের তথ্য কেবল অনুরোধকারীর private record থেকে প্রয়োজন হলে দেখা হবে। ডোনারের ফোন নম্বর শুধু consentUpdatedAt থাকা রেকর্ডে দেখানো হবে এবং public projection-এ কপি করা হবে না।</p>
             <div id="blood-requests-panel" class="space-y-3"></div>
             <div id="blood-donors-panel" class="hidden-custom"><div id="list-donors" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div></div>
+            <section id="blood-operator-applications-panel" class="hidden-custom space-y-3"><div class="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm leading-6 text-blue-900"><strong>Operator access আবেদন</strong><p>অনুমোদন দিলে আবেদনকারীর account-এ শুধু blood_operator access ও পাথরঘাটা-ব্যাপী scope যুক্ত হবে—Admin permission নয়। পরিচয়, সংস্থার নাম ও যোগাযোগের তথ্য যাচাই করে সিদ্ধান্ত নিন।</p></div><div id="list-blood-operator-applications" class="grid grid-cols-1 gap-4"><p class="rounded-xl border bg-white p-6 text-center text-gray-500">আবেদন লোড হচ্ছে…</p></div></section>
         </div>
 
         <!-- EMERGENCY ALERT TAB -->
@@ -1138,11 +1139,18 @@
     });
 
     window.switchBloodTab = (tab) => {
-        const requests = tab === 'requests';
-        document.getElementById('blood-requests-panel').classList.toggle('hidden-custom', !requests);
-        document.getElementById('blood-donors-panel').classList.toggle('hidden-custom', requests);
-        document.getElementById('btn-blood-requests').className = `rounded-lg border px-4 py-2 text-sm font-bold ${requests ? 'border-red-200 bg-red-600 text-white' : 'border-gray-200 bg-white text-gray-700'}`;
-        document.getElementById('btn-blood-donors').className = `rounded-lg border px-4 py-2 text-sm font-bold ${!requests ? 'border-red-200 bg-red-600 text-white' : 'border-gray-200 bg-white text-gray-700'}`;
+        if (!['requests', 'donors', 'applications'].includes(tab)) tab = 'requests';
+        const panels = { requests: 'blood-requests-panel', donors: 'blood-donors-panel', applications: 'blood-operator-applications-panel' };
+        const buttons = { requests: 'btn-blood-requests', donors: 'btn-blood-donors', applications: 'btn-blood-applications' };
+        Object.entries(panels).forEach(([key, id]) => document.getElementById(id).classList.toggle('hidden-custom', key !== tab));
+        Object.entries(buttons).forEach(([key, id]) => {
+            document.getElementById(id).className = `rounded-lg border px-3 py-2 text-sm font-bold ${key === tab ? 'border-red-200 bg-red-600 text-white' : 'border-gray-200 bg-white text-gray-700'}`;
+        });
+        const applicationBadge = document.getElementById('badge-blood-operator-applications');
+        if (applicationBadge) {
+            applicationBadge.style.backgroundColor = tab === 'applications' ? 'rgba(255,255,255,.2)' : '#fee2e2';
+            applicationBadge.style.color = tab === 'applications' ? '#fff' : '#b91c1c';
+        }
     };
     window.showBloodPrivateDetails = async (requestId) => {
         try {
@@ -3206,6 +3214,198 @@
     const adminDate = (value) => value ? new Date(Number(value)).toLocaleString('bn-BD', { dateStyle: 'medium', timeStyle: 'short' }) : 'সময় নেই';
     const adminStatusLabel = (value) => ({ pending: 'Pending', accepted: 'Accepted', preparing: 'Preparing', shipped: 'Shipped', delivered: 'Delivered', cancelled: 'Cancelled', in_progress: 'In progress', resolved: 'Resolved', rejected: 'Rejected' }[String(value)] || String(value || 'অজানা'));
     const adminStatusClass = (value) => ({ delivered: 'bg-green-100 text-green-700', resolved: 'bg-green-100 text-green-700', cancelled: 'bg-red-100 text-red-700', rejected: 'bg-red-100 text-red-700', shipped: 'bg-blue-100 text-blue-700', preparing: 'bg-indigo-100 text-indigo-700', accepted: 'bg-purple-100 text-purple-700' }[String(value)] || 'bg-amber-100 text-amber-700');
+    let adminBloodPartnerRequests = {};
+    let bloodPartnerRequestsUnsubscribe = null;
+    let bloodOperatorActionUid = '';
+    const bloodOperatorRevision = (request) => request.revisionId || `legacy:${Number(request.requestedAt) || 0}`;
+    async function claimBloodOperatorDecision(uid, decision, actorUid, expectedRevision) {
+        const requestRef = ref(db, `blood_partner_access_requests/${uid}`);
+        const initialSnapshot = await get(requestRef);
+        const initialRequest = initialSnapshot.val();
+        let firstCallback = true;
+        const transaction = await runTransaction(requestRef, (current) => {
+            const latest = current ?? (firstCallback ? initialRequest : null);
+            firstCallback = false;
+            if (!latest || latest.status !== 'pending') return;
+            if (bloodOperatorRevision(latest) !== expectedRevision) return;
+            if (latest.reviewDecision) return latest.reviewDecision === decision ? latest : undefined;
+            return { ...latest, revisionId: latest.revisionId || expectedRevision, reviewDecision: decision, reviewStartedAt: Date.now(), reviewStartedBy: actorUid };
+        });
+        if (!transaction.committed) {
+            const latest = transaction.snapshot.val() || initialRequest || {};
+            if (bloodOperatorRevision(latest) !== expectedRevision) throw new Error('এই আবেদনটি নতুন submission দিয়ে বদলেছে; তালিকা refresh করে পুনরায় যাচাই করুন।');
+            if (latest.reviewDecision && latest.reviewDecision !== decision) throw new Error(`এই আবেদনে আগে থেকেই ${latest.reviewDecision === 'approved' ? 'অনুমোদন' : 'প্রত্যাখ্যান'} শুরু হয়েছে; একই সিদ্ধান্ত সম্পন্ন করুন।`);
+            throw new Error('আবেদনটি আর অপেক্ষমাণ নেই। তালিকা রিফ্রেশ করুন।');
+        }
+        const request = transaction.snapshot.val();
+        if (!request || request.status !== 'pending' || request.reviewDecision !== decision) throw new Error('আবেদনের decision lock নিশ্চিত করা যায়নি। তালিকা রিফ্রেশ করুন।');
+        return request;
+    }
+    function bloodOperatorAuditUpdate(actorUid, action, target, before, after, result, timestamp) {
+        const auditId = push(ref(db, 'super_admin_audit')).key;
+        if (!auditId) throw new Error('Admin audit event ID তৈরি করা যায়নি।');
+        const clip = (value) => JSON.stringify(value ?? null).slice(0, 3900);
+        return {
+            [`super_admin_audit/${auditId}`]: {
+                actorUid,
+                action,
+                target,
+                before: clip(before),
+                after: clip(after),
+                reason: `Blood operator application ${result}`,
+                requestId: `${action}-${timestamp}-${auditId}`.slice(0, 128),
+                timestamp,
+                result,
+            },
+        };
+    }
+    function bindBloodOperatorApplicationActions() {
+        const panel = document.getElementById('list-blood-operator-applications');
+        if (!panel || panel.dataset.actionHandlersBound === 'true') return;
+        panel.dataset.actionHandlersBound = 'true';
+        panel.addEventListener('click', (event) => {
+            const target = event.target instanceof Element ? event.target.closest('[data-blood-operator-action], [data-retry-blood-operators]') : null;
+            if (!target) return;
+            if (target.hasAttribute('data-retry-blood-operators')) { window.loadBloodOperatorApplications(); return; }
+            const uid = target.getAttribute('data-uid');
+            if (!uid) return;
+            if (target.getAttribute('data-blood-operator-action') === 'approve') void window.approveBloodOperatorApplication(uid);
+            if (target.getAttribute('data-blood-operator-action') === 'reject') void window.rejectBloodOperatorApplication(uid);
+        });
+    }
+    window.renderBloodOperatorApplications = () => {
+        const list = document.getElementById('list-blood-operator-applications');
+        const sidebarBadge = document.getElementById('badge-blood-operators');
+        const tabBadge = document.getElementById('badge-blood-operator-applications');
+        if (!list) return;
+        bindBloodOperatorApplicationActions();
+        const pending = Object.entries(adminBloodPartnerRequests || {})
+            .filter(([, request]) => request && request.status === 'pending')
+            .sort((a, b) => Number((b[1] || {}).requestedAt || 0) - Number((a[1] || {}).requestedAt || 0));
+        [sidebarBadge, tabBadge].forEach((badge) => {
+            if (!badge) return;
+            badge.textContent = String(pending.length);
+            badge.classList.toggle('hidden', pending.length === 0);
+        });
+        if (!pending.length) {
+            list.innerHTML = '<div class="rounded-xl border border-gray-200 bg-white p-8 text-center"><i class="fa-solid fa-circle-check text-3xl text-emerald-600"></i><p class="mt-3 font-bold text-gray-800">নতুন কোনো operator আবেদন নেই</p><p class="mt-1 text-sm text-gray-500">কেউ আবেদন জমা দিলে এখানে দেখা যাবে।</p></div>';
+            return;
+        }
+        list.innerHTML = pending.map(([uid, request]) => {
+            const busy = bloodOperatorActionUid === uid;
+            const decision = ['approved', 'rejected'].includes(request.reviewDecision) ? request.reviewDecision : '';
+            const canApprove = !decision || decision === 'approved';
+            const canReject = !decision || decision === 'rejected';
+            const statusText = decision ? `আগে ${decision === 'approved' ? 'অনুমোদন' : 'প্রত্যাখ্যান'} শুরু হয়েছে—সেই সিদ্ধান্ত সম্পন্ন করুন` : 'পর্যালোচনা প্রয়োজন';
+            return `<article class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"><div class="flex flex-wrap items-start justify-between gap-3"><div class="min-w-0 flex-1"><span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">${statusText}</span><h3 class="mt-3 text-lg font-bold text-slate-900">${escapeHTML(request.organizationName || 'সংস্থার নাম নেই')}</h3><p class="mt-1 text-sm text-slate-700">আবেদনকারী: ${escapeHTML(request.displayName || 'নাম নেই')}</p><div class="mt-3 grid gap-1 text-sm text-slate-600 sm:grid-cols-2"><p><i class="fa-regular fa-envelope mr-2"></i>${escapeHTML(request.email || 'ইমেইল নেই')}</p><p><i class="fa-solid fa-phone mr-2"></i>${escapeHTML(request.phone || 'ফোন নেই')}</p></div><p class="mt-2 text-xs text-slate-400">আবেদনের সময়: ${escapeHTML(adminDate(request.requestedAt))} · UID: <span class="font-mono">${escapeHTML(uid)}</span></p></div></div><div class="mt-4 flex flex-wrap gap-2 border-t pt-4"><button type="button" data-blood-operator-action="approve" data-uid="${escapeHTML(uid)}" ${busy || !canApprove ? 'disabled' : ''} class="rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"><i class="fa-solid ${busy ? 'fa-spinner fa-spin' : 'fa-circle-check'} mr-1"></i>${busy ? 'প্রক্রিয়াধীন…' : decision === 'approved' ? 'অনুমোদন সম্পন্ন করুন' : 'অনুমোদন'}</button><button type="button" data-blood-operator-action="reject" data-uid="${escapeHTML(uid)}" ${busy || !canReject ? 'disabled' : ''} class="rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-bold text-red-700 disabled:opacity-60">${decision === 'rejected' ? 'প্রত্যাখ্যান সম্পন্ন করুন' : 'প্রত্যাখ্যান'}</button></div></article>`;
+        }).join('');
+    };
+    window.loadBloodOperatorApplications = () => {
+        if (!auth.currentUser) return;
+        bindBloodOperatorApplicationActions();
+        if (bloodPartnerRequestsUnsubscribe) bloodPartnerRequestsUnsubscribe();
+        const list = document.getElementById('list-blood-operator-applications');
+        if (list) list.innerHTML = '<p class="rounded-xl border bg-white p-6 text-center text-gray-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i>আবেদন লোড হচ্ছে…</p>';
+        [document.getElementById('badge-blood-operators'), document.getElementById('badge-blood-operator-applications')].forEach((badge) => badge?.classList.add('hidden'));
+        bloodPartnerRequestsUnsubscribe = onValue(query(ref(db, 'blood_partner_access_requests'), orderByChild('status'), equalTo('pending')), (snapshot) => {
+            adminBloodPartnerRequests = snapshot.val() || {};
+            window.renderBloodOperatorApplications();
+        }, (error) => {
+            console.error('Blood operator application load failed:', error);
+            adminBloodPartnerRequests = {};
+            const message = /permission_denied/i.test(`${error.code || ''} ${error.message || ''}`)
+                ? 'Firebase Rules এই আবেদন তালিকা পড়ার অনুমতি দেয়নি। সঠিক project-এর admin-only rules প্রকাশিত আছে কি না দেখুন।'
+                : 'Operator আবেদন লোড হয়নি। সংযোগ, Admin claim ও Firebase Rules পরীক্ষা করে আবার চেষ্টা করুন।';
+            const panel = document.getElementById('list-blood-operator-applications');
+            if (panel) panel.innerHTML = `<div role="alert" class="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800"><p>${escapeHTML(message)}</p><button type="button" data-retry-blood-operators class="mt-3 rounded-lg border border-red-300 bg-white px-4 py-2 font-bold text-red-800"><i class="fa-solid fa-rotate-right mr-1"></i>আবার চেষ্টা</button></div>`;
+        });
+    };
+    window.approveBloodOperatorApplication = async (uid) => {
+        const user = auth.currentUser;
+        if (!user) return alert('Admin session নেই। আবার লগইন করুন।');
+        if (bloodOperatorActionUid) return;
+        const cached = adminBloodPartnerRequests[uid];
+        if (!cached || cached.status !== 'pending') return alert('আবেদনটি আর অপেক্ষমাণ নেই। তালিকা রিফ্রেশ করুন।');
+        if (!confirm(cached.reviewDecision === 'approved' ? `${cached.organizationName || 'এই সংস্থা'}-এর আগে শুরু করা অনুমোদনটি সম্পন্ন করবেন?` : `${cached.organizationName || 'এই সংস্থা'}-কে blood operator access দেবেন? Scope হবে পুরো পাথরঘাটা; এতে Admin permission দেওয়া হবে না।`)) return;
+        bloodOperatorActionUid = uid;
+        window.renderBloodOperatorApplications();
+        try {
+            const token = await user.getIdTokenResult();
+            if (token.claims.admin !== true) throw new Error('Firebase admin custom claim যাচাই হয়নি।');
+            const request = await claimBloodOperatorDecision(uid, 'approved', user.uid, bloodOperatorRevision(cached));
+            const existingSnapshot = await get(ref(db, `blood_partner_access/${uid}`));
+            const existing = existingSnapshot.val() || {};
+            const now = Date.now();
+            const membership = {
+                uid,
+                email: String(request.email || '').slice(0, 254),
+                displayName: String(request.displayName || '').slice(0, 160),
+                organizationName: String(request.organizationName || '').slice(0, 160),
+                role: 'blood_operator',
+                scope: 'pathargata_all',
+                active: true,
+                createdAt: Number(existing.createdAt) || now,
+                createdBy: String(existing.createdBy || user.uid),
+                updatedAt: now,
+                updatedBy: user.uid,
+            };
+            const after = { ...request, status: 'approved', reviewedAt: now, reviewedBy: user.uid };
+            await update(ref(db), {
+                ...bloodOperatorAuditUpdate(user.uid, 'blood_operator_access_approved', `blood_partner_access/${uid}`, { uid, status: request.status, organizationName: request.organizationName }, { uid, role: membership.role, scope: membership.scope, active: membership.active }, 'approved', now),
+                [`blood_partner_access/${uid}`]: membership,
+                [`blood_partner_access_requests/${uid}/status`]: 'approved',
+                [`blood_partner_access_requests/${uid}/reviewedAt`]: now,
+                [`blood_partner_access_requests/${uid}/reviewedBy`]: user.uid,
+                [`blood_partner_access_requests/${uid}/reviewDecision`]: null,
+                [`blood_partner_access_requests/${uid}/reviewStartedAt`]: null,
+                [`blood_partner_access_requests/${uid}/reviewStartedBy`]: null,
+            });
+            alert(`${request.organizationName || 'সংস্থা'}-এর operator আবেদন অনুমোদিত হয়েছে।`);
+            adminBloodPartnerRequests[uid] = after;
+            window.renderBloodOperatorApplications();
+        } catch (error) {
+            console.error('Blood operator approval failed:', error);
+            alert(`অনুমোদন সম্পন্ন হয়নি। একই সিদ্ধান্তে আবার চেষ্টা করুন; অন্য সিদ্ধান্ত দেবেন না যতক্ষণ lock দেখা যায়।\n${error.message || 'Firebase Rules ও Admin claim পরীক্ষা করুন।'}`);
+        } finally {
+            bloodOperatorActionUid = '';
+            window.renderBloodOperatorApplications();
+        }
+    };
+    window.rejectBloodOperatorApplication = async (uid) => {
+        const user = auth.currentUser;
+        if (!user) return alert('Admin session নেই। আবার লগইন করুন।');
+        if (bloodOperatorActionUid) return;
+        const cached = adminBloodPartnerRequests[uid];
+        if (!cached || cached.status !== 'pending') return alert('আবেদনটি আর অপেক্ষমাণ নেই। তালিকা রিফ্রেশ করুন।');
+        if (!confirm(cached.reviewDecision === 'rejected' ? `${cached.organizationName || 'এই সংস্থা'}-এর আগে শুরু করা প্রত্যাখ্যানটি সম্পন্ন করবেন?` : `${cached.organizationName || 'এই সংস্থা'}-এর operator আবেদন প্রত্যাখ্যান করবেন?`)) return;
+        bloodOperatorActionUid = uid;
+        window.renderBloodOperatorApplications();
+        try {
+            const token = await user.getIdTokenResult();
+            if (token.claims.admin !== true) throw new Error('Firebase admin custom claim যাচাই হয়নি।');
+            const request = await claimBloodOperatorDecision(uid, 'rejected', user.uid, bloodOperatorRevision(cached));
+            const now = Date.now();
+            const after = { ...request, status: 'rejected', reviewedAt: now, reviewedBy: user.uid };
+            await update(ref(db), {
+                ...bloodOperatorAuditUpdate(user.uid, 'blood_operator_access_rejected', `blood_partner_access_requests/${uid}`, { uid, status: request.status, organizationName: request.organizationName }, { uid, status: 'rejected', reviewedAt: now }, 'rejected', now),
+                [`blood_partner_access_requests/${uid}/status`]: 'rejected',
+                [`blood_partner_access_requests/${uid}/reviewedAt`]: now,
+                [`blood_partner_access_requests/${uid}/reviewedBy`]: user.uid,
+                [`blood_partner_access_requests/${uid}/reviewDecision`]: null,
+                [`blood_partner_access_requests/${uid}/reviewStartedAt`]: null,
+                [`blood_partner_access_requests/${uid}/reviewStartedBy`]: null,
+            });
+            adminBloodPartnerRequests[uid] = after;
+            window.renderBloodOperatorApplications();
+            alert('Operator আবেদনটি প্রত্যাখ্যান করা হয়েছে।');
+        } catch (error) {
+            console.error('Blood operator rejection failed:', error);
+            alert(`প্রত্যাখ্যান সম্পন্ন হয়নি। একই সিদ্ধান্তে আবার চেষ্টা করুন; অন্য সিদ্ধান্ত দেবেন না যতক্ষণ lock দেখা যায়।\n${error.message || 'Firebase Rules ও Admin claim পরীক্ষা করুন।'}`);
+        } finally {
+            bloodOperatorActionUid = '';
+            window.renderBloodOperatorApplications();
+        }
+    };
     async function writeAdminAudit(action, target, before, after, reason, result = 'success') {
         try {
             const actorUid = auth.currentUser?.uid;
@@ -3216,6 +3416,7 @@
     }
     window.loadAdminOperationalData = () => {
         if (!auth.currentUser) return;
+        window.loadBloodOperatorApplications();
         onValue(query(ref(db, 'market_orders'), orderByChild('time'), limitToLast(300)), snap => { adminOrders = snap.val() || {}; renderAdminOrders(); });
         onValue(query(ref(db, 'feedback_submissions'), orderByChild('timestamp'), limitToLast(300)), snap => { adminFeedback = snap.val() || {}; renderAdminFeedback(); });
         onValue(query(ref(db, 'stories'), orderByChild('timestamp'), limitToLast(200)), snap => { adminStories = snap.val() || {}; renderAdminStories(); });
