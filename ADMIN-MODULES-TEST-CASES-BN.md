@@ -204,3 +204,27 @@ Release-ready বলা যাবে কেবল তখনই যখন:
 | BLOOD-APP-09 | Stale card | revision-1 আবেদন reject হওয়ার পরে একই UID revision-2 দিয়ে আবেদন করুক; revision-1 খোলা card থেকে সিদ্ধান্ত দিন | transaction revision mismatch-এ abort হয়; revision-2 pending থাকে, কোনো membership/audit decision তৈরি হয় না এবং Admin-কে তালিকা refresh করতে বলা হয় |
 
 Admin panel path: **Sidebar → রক্ত সেবা → Operator আবেদন**. **“এলাকা প্রবেশ অনুমোদন”** হলো NID/location review-এর tab; blood operator application সেখানে নয়।
+
+
+## জরুরি SOS / alert management — Admin smoke tests
+
+Navigation: **Sidebar → জরুরি এলার্ট**. Emergency contact directory edit করতে **হাসপাতাল/জরুরি যোগাযোগ** button বা **ডিরেক্টরি → Hospital / Health** ব্যবহার করুন। User app-এর hospital path `directory/health`; `directory/hospital` কেবল legacy record দেখার জন্য।
+
+| ID | Test | ধাপ | Expected result |
+|---|---|---|---|
+| SOS-01 | Queue ও badge | Admin claim account দিয়ে লগইন করে জরুরি এলার্ট tab খুলুন | Real-time `emergency_alerts` load হবে; চলমান, যাচাই বাকি, মোট count ও unverified sidebar badge মিলবে |
+| SOS-02 | Filter | চলমান, যাচাই বাকি, সাড়া দেওয়া, সমাধান, বাতিল ও সব filter নির্বাচন করুন | সঠিক status/verification record দেখা যাবে; empty state স্পষ্ট হবে |
+| SOS-03 | Private data | একটি alert-এ ব্যক্তিগত যোগাযোগের তথ্য দেখার বোতাম চাপুন | Admin claim-authorized `emergency_alert_private/{id}` থেকে নাম/ফোন/আক্রান্ত/জিপিএস দেখা যাবে; call ও map link হবে; public alert বা audit-এ PII থাকবে না |
+| SOS-04 | Verify | `unverified` alert যাচাই করুন | `verificationStatus=verified`, `updatedAt`, `updatedBy` এবং একই atomic update-এর `super_admin_audit` event লেখা হবে |
+| SOS-05 | Reject | ভুল/অনুপযুক্ত alert reject করুন | `verificationStatus=rejected`, `status=cancelled`; কারণ audit-এ থাকবে; public active SOS list থেকে বাদ যাবে |
+| SOS-06 | Response lifecycle | reported → responding → resolved সম্পন্ন করুন | User app-এর live alert status বদলাবে; status transition ও Admin actor timestamp rules validation-এ পাস করবে |
+| SOS-07 | Cancel/reopen | Active alert বাতিল করুন; পরে reopen করুন | বাতিলে confirmation/reason ও audit থাকবে; reopen করলে cancelled→reported বা resolved→responding হবে; rejected record reopen করলে `verificationStatus=unverified` হয়ে আবার active queue-তে আসবে |
+| SOS-08 | Atomic audit | Admin Panel থেকে status/verification action সম্পন্ন করুন | Panel-এর alert update এবং immutable `super_admin_audit` একই multi-location write-এ থাকবে; audit write ব্যর্থ হলে Panel action ব্যর্থ হবে |
+| SOS-09 | Concurrent/stale card | অন্য Admin ইতিমধ্যে state বদলানোর পরে পুরোনো কার্ড থেকে action চাপুন | UI latest record মিলিয়ে stale action থামাবে; Firebase Rules শুধু অনুমোদিত transition নেবে |
+| SOS-10 | Permission failure | private read বা update-এর Admin permission বাদ দিয়ে emulator চালান | Permission/error state দেখা যাবে; contact data বা success status মিথ্যা দেখানো হবে না |
+| SOS-11 | Directory ID | `ডিরেক্টরি → Hospital / Health`-এ একটি test entry যোগ করুন | record `directory/health`-এ থাকবে এবং Native App হাসপাতাল তালিকার key-এর সঙ্গে মিলবে; legacy `directory/hospital` অক্ষত থাকবে |
+| SOS-12 | Canonical submit | `/service/emergency` route খোলুন | unruled `service_requests/emergency`-এ data read/write না করে canonical `/emergency` SOS form খুলবে |
+| SOS-13 | Admin authorization/actor | সাধারণ user account দিয়ে Admin decision চেষ্টা করুন; Admin দিয়ে `updatedAt`/`updatedBy` ছাড়া write চেষ্টা করুন | Admin claim gate ও Firebase Rules update প্রত্যাখ্যান করবে; প্রত্যেক বিদ্যমান alert update-এ বর্তমান Admin UID ও timestamp বাধ্যতামূলক |
+| SOS-14 | Public privacy/deletion | নিজের public test alert-এ `phone`, `phoneNumber`, `requesterName`, `email`, `gps` বা `coordinates` field যোগের চেষ্টা করুন; বিদ্যমান alert delete-ও চেষ্টা করুন | sensitive aliases validation-এ reject হবে এবং alert record delete হবে না |
+
+**Deployment note:** Admin UI push এবং Firebase RTDB Rules deployment আলাদা। Rules update-এর আগে live Rules-এর পূর্ণ backup নিন; repo-এর `database.rules.json`-এর সঙ্গে diff/merge করে emergency lifecycle, privacy ও actor/time clauses যাচাই করুন, তারপর Emulator suite চালিয়ে publish করুন। RTDB Rules sibling-path audit event enforce করতে পারে না; direct Admin SDK update এড়িয়ে শুধু audited Admin Panel action ব্যবহার করুন। Browser/OS push notification এখানে নেই; real-time Admin queue দেখতে panel খোলা থাকতে হবে।

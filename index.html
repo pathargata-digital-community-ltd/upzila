@@ -123,7 +123,7 @@
             <div onclick="switchTab('finance')" id="menu-finance" class="sidebar-item p-3 cursor-pointer flex items-center gap-3"><i class="fa-solid fa-wallet w-5 text-center"></i><span class="menu-text">মনিটাইজেশন</span></div>
             <div onclick="switchTab('audit')" id="menu-audit" class="sidebar-item p-3 cursor-pointer flex items-center gap-3"><i class="fa-solid fa-shield-halved w-5 text-center"></i><span class="menu-text">অডিট লগ</span></div>
             <div onclick="switchTab('blood')" id="menu-blood" class="sidebar-item p-3 cursor-pointer flex items-center gap-3 relative"><i class="fa-solid fa-heart-pulse w-5 text-center"></i><span class="menu-text">রক্ত সেবা</span><span id="badge-blood-operators" class="hidden absolute right-2 bg-red-500 text-white text-[10px] px-1.5 rounded-full">0</span></div>
-            <div onclick="switchTab('emergency')" id="menu-emergency" class="sidebar-item p-3 cursor-pointer flex items-center gap-3"><i class="fa-solid fa-bell w-5 text-center"></i><span class="menu-text">জরুরি এলার্ট</span></div>
+            <div onclick="switchTab('emergency')" id="menu-emergency" class="sidebar-item p-3 cursor-pointer flex items-center gap-3 relative"><i class="fa-solid fa-bell w-5 text-center"></i><span class="menu-text">জরুরি এলার্ট</span><span id="badge-emergency" class="hidden absolute right-2 bg-red-600 text-white text-[10px] px-1.5 rounded-full">0</span></div>
             <div onclick="switchTab('complaints')" id="menu-complaints" class="sidebar-item p-3 cursor-pointer flex items-center gap-3"><i class="fa-solid fa-inbox w-5 text-center"></i><span class="menu-text">নাগরিক অভিযোগ</span></div>
             <div onclick="switchTab('services')" id="menu-services" class="sidebar-item p-3 cursor-pointer flex items-center gap-3"><i class="fa-solid fa-layer-group w-5 text-center"></i><span class="menu-text">পর্যটন ও শিক্ষা</span></div>
             <div onclick="switchTab('transport')" id="menu-transport" class="sidebar-item p-3 cursor-pointer flex items-center gap-3"><i class="fa-solid fa-bus w-5 text-center"></i><span class="menu-text">পরিবহন</span></div>
@@ -331,7 +331,8 @@
                     <button onclick="filterDirectory('up')" class="cat-btn border px-4 py-2 rounded-full text-sm font-bold bg-white text-gray-600 hover:bg-gray-100">UP (ইউপি)</button>
                     <button onclick="filterDirectory('uno')" class="cat-btn active border px-4 py-2 rounded-full text-sm font-bold bg-white text-gray-600 hover:bg-gray-100">UNO</button>
                     <button onclick="filterDirectory('police')" class="cat-btn border px-4 py-2 rounded-full text-sm font-bold bg-white text-gray-600 hover:bg-gray-100">Police</button>
-                    <button onclick="filterDirectory('hospital')" class="cat-btn border px-4 py-2 rounded-full text-sm font-bold bg-white text-gray-600 hover:bg-gray-100">Hospital</button>
+                    <button onclick="filterDirectory('health')" class="cat-btn border px-4 py-2 rounded-full text-sm font-bold bg-white text-gray-600 hover:bg-gray-100">Hospital / Health</button>
+                    <button onclick="filterDirectory('hospital')" class="cat-btn border border-amber-200 px-4 py-2 rounded-full text-sm font-bold bg-amber-50 text-amber-800 hover:bg-amber-100">পুরোনো Hospital path</button>
                     <button onclick="filterDirectory('doctor')" class="cat-btn border px-4 py-2 rounded-full text-sm font-bold bg-white text-gray-600 hover:bg-gray-100">Doctor</button>
                     <button onclick="filterDirectory('fire')" class="cat-btn border px-4 py-2 rounded-full text-sm font-bold bg-white text-gray-600 hover:bg-gray-100">Fire Service</button>
                     <button onclick="filterDirectory('electricity')" class="cat-btn border px-4 py-2 rounded-full text-sm font-bold bg-white text-gray-600 hover:bg-gray-100">Electricity</button>
@@ -568,8 +569,23 @@
 
         <!-- EMERGENCY ALERT TAB -->
         <div id="tab-emergency" class="hidden-custom space-y-6">
-            <h2 class="text-2xl font-bold text-red-600 border-l-4 border-red-500 pl-3">জরুরি এলার্ট ম্যানেজমেন্ট</h2>
-            <div id="list-emergency" class="space-y-3"></div>
+            <div class="flex flex-wrap items-start justify-between gap-3">
+                <div><h2 class="text-2xl font-bold text-red-600 border-l-4 border-red-500 pl-3">জরুরি এলার্ট ম্যানেজমেন্ট</h2><p class="mt-2 text-sm text-gray-600">SOS যাচাই, সাড়া দেওয়া, সমাধান ও বাতিলের সিদ্ধান্ত এখানে অডিটসহ সংরক্ষিত হবে। এটি ৯৯৯ dispatch service নয়—জীবনঝুঁকিতে সরকারি ৯৯৯-এ কল করুন।</p></div>
+                <button onclick="switchTab('directory'); filterDirectory('health')" class="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-bold text-red-700 hover:bg-red-50"><i class="fa-solid fa-address-book mr-1"></i>হাসপাতাল/জরুরি যোগাযোগ</button>
+            </div>
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div class="rounded-xl border border-red-100 bg-red-50 p-4"><p class="text-xs font-bold text-red-700">চলমান alert</p><p id="emergency-active-count" class="mt-1 text-2xl font-extrabold text-red-800">—</p></div>
+                <div class="rounded-xl border border-amber-100 bg-amber-50 p-4"><p class="text-xs font-bold text-amber-700">যাচাই বাকি</p><p id="emergency-unverified-count" class="mt-1 text-2xl font-extrabold text-amber-800">—</p></div>
+                <div class="rounded-xl border border-slate-200 bg-white p-4"><p class="text-xs font-bold text-slate-600">মোট alert</p><p id="emergency-total-count" class="mt-1 text-2xl font-extrabold text-slate-800">—</p></div>
+            </div>
+            <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white p-3">
+                <label for="emergency-alert-filter" class="text-sm font-bold text-gray-700">তালিকা দেখুন</label>
+                <select id="emergency-alert-filter" onchange="renderEmergencyAlerts()" class="min-w-[190px] rounded-lg border border-gray-300 bg-white p-2 text-sm">
+                    <option value="active">চলমান ও যাচাই বাকি</option><option value="unverified">যাচাই বাকি</option><option value="responding">সাড়া দেওয়া হচ্ছে</option><option value="resolved">সমাধান হয়েছে</option><option value="cancelled">বাতিল / যাচাইয়ে বাতিল</option><option value="all">সব alert</option>
+                </select>
+            </div>
+            <p id="emergency-alert-error" role="alert" class="hidden rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800"></p>
+            <div id="list-emergency" class="space-y-3"><p class="rounded-xl bg-white p-8 text-center text-gray-500">জরুরি alert লোড হচ্ছে...</p></div>
         </div>
 
 
@@ -1014,6 +1030,12 @@
     const restoreTrashPost = httpsCallable(functions, 'restoreTrashPost');
 
     let allComplaints =[];
+    let emergencyAlerts = {};
+    let emergencyAlertsReady = false;
+    let emergencyAlertsLoadError = '';
+    const emergencyPrivateDetails = new Map();
+    const emergencyPrivateErrors = new Map();
+    const emergencyPrivateLoading = new Set();
 
     // Pagination Variables
     let lastUserKey = null;
@@ -1612,12 +1634,14 @@
         });
 
         onValue(ref(db, 'emergency_alerts'), (snap) => {
-            const data = snap.val() || {};
-            const list = document.getElementById('list-emergency');
-            if(!data || Object.keys(data).length === 0) { list.innerHTML = '<p class="text-gray-400 text-center py-4">কোনো জরুরি এলার্ট নেই</p>'; return; }
-            list.innerHTML = Object.entries(data).reverse().map(([id, item]) => `
-                <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-red-500 flex justify-between items-start"><div><div class="flex items-center gap-2 mb-1"><span class="bg-red-100 text-red-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase">${escapeHTML(item.type || "Emergency")}</span><span class="text-xs text-gray-400">${new Date(item.timestamp).toLocaleString()}</span></div><h4 class="font-bold text-gray-800">${escapeHTML(item.title || "")}</h4><p class="text-sm text-gray-600 mt-1">${escapeHTML(item.desc || "")}</p><p class="text-xs text-gray-500 mt-2"><b>By:</b> <span class="cursor-pointer text-blue-600 hover:underline" onclick="viewUserDetails('${item.authorId || item.uid}')">${escapeHTML(item.authorName || "User")}</span> | <b>Phone:</b> ${escapeHTML(item.contact || "")}</p></div><button onclick="deleteItem('emergency_alerts/${id}')" class="text-red-500 bg-red-50 w-8 h-8 rounded-full flex items-center justify-center hover:bg-red-200"><i class="fa-solid fa-trash"></i></button></div>
-            `).join('');
+            emergencyAlerts = snap.val() || {};
+            emergencyAlertsReady = true;
+            emergencyAlertsLoadError = '';
+            window.renderEmergencyAlerts();
+        }, (error) => {
+            emergencyAlertsLoadError = error?.message || 'Firebase Rules বা সংযোগের কারণে জরুরি alert পড়া যায়নি।';
+            emergencyAlertsReady = true;
+            window.renderEmergencyAlerts();
         });
 
         // Native App moderation queues. Message-report content stays encrypted; show metadata only.
@@ -3414,6 +3438,119 @@
             await set(push(ref(db, 'super_admin_audit')), { actorUid, action: String(action).slice(0, 80), target: String(target).slice(0, 256), before: clip(before), after: clip(after), reason: String(reason || 'Admin Panel operation').slice(0, 300), requestId: `admin-ui-${Date.now()}`, timestamp: Date.now(), result });
         } catch (error) { console.warn('Audit log write failed:', error); }
     }
+    const emergencyStatusLabel = (status) => ({ reported: 'রিপোর্ট হয়েছে', responding: 'সহায়তা চলছে', resolved: 'সমাধান হয়েছে', cancelled: 'বাতিল' }[status] || 'অজানা status');
+    const emergencyVerificationLabel = (status) => ({ verified: 'যাচাইকৃত', rejected: 'যাচাইয়ে বাতিল', unverified: 'যাচাই বাকি' }[status] || 'যাচাই বাকি');
+    const emergencyIsActive = (item) => ['reported', 'responding'].includes(String(item?.status || 'reported')) && item?.verificationStatus !== 'rejected';
+    function bindEmergencyButtons() {
+        const list = document.getElementById('list-emergency');
+        if (!list) return;
+        list.querySelectorAll('[data-emergency-private]').forEach((button) => button.addEventListener('click', () => window.loadEmergencyPrivateDetails(button.dataset.emergencyPrivate)));
+        list.querySelectorAll('[data-emergency-action]').forEach((button) => button.addEventListener('click', () => window.handleEmergencyAction(button.dataset.alertId, button.dataset.emergencyAction)));
+    }
+    window.renderEmergencyAlerts = () => {
+        const list = document.getElementById('list-emergency');
+        if (!list) return;
+        const rows = Object.entries(emergencyAlerts || {}).filter(([, item]) => item && typeof item === 'object').map(([id, item]) => ({ id, ...item })).sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
+        const activeCount = rows.filter(emergencyIsActive).length;
+        const unverifiedCount = rows.filter((item) => emergencyIsActive(item) && String(item.verificationStatus || 'unverified') === 'unverified').length;
+        document.getElementById('emergency-active-count').textContent = String(activeCount);
+        document.getElementById('emergency-unverified-count').textContent = String(unverifiedCount);
+        document.getElementById('emergency-total-count').textContent = String(rows.length);
+        const badge = document.getElementById('badge-emergency');
+        if (badge) { badge.textContent = String(unverifiedCount); badge.classList.toggle('hidden', !unverifiedCount); }
+        const errorBox = document.getElementById('emergency-alert-error');
+        if (emergencyAlertsLoadError) { errorBox.textContent = `জরুরি alert লোড হয়নি: ${emergencyAlertsLoadError} — Admin claim ও Firebase Rules পরীক্ষা করুন।`; errorBox.classList.remove('hidden'); }
+        else { errorBox.textContent = ''; errorBox.classList.add('hidden'); }
+        if (!emergencyAlertsReady && !emergencyAlertsLoadError) { list.innerHTML = '<p class="rounded-xl bg-white p-8 text-center text-gray-500">জরুরি alert লোড হচ্ছে...</p>'; return; }
+        if (emergencyAlertsLoadError) { list.innerHTML = '<p class="rounded-xl bg-white p-8 text-center text-gray-500">অনুমতি/সংযোগ ঠিক হলে Retry করে আবার লোড করুন।</p><button id="emergency-retry" class="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white">আবার চেষ্টা করুন</button>'; document.getElementById('emergency-retry')?.addEventListener('click', () => { emergencyAlertsReady = false; emergencyAlertsLoadError = ''; window.renderEmergencyAlerts(); onValue(ref(db, 'emergency_alerts'), (snap) => { emergencyAlerts = snap.val() || {}; emergencyAlertsReady = true; emergencyAlertsLoadError = ''; window.renderEmergencyAlerts(); }, (error) => { emergencyAlertsReady = true; emergencyAlertsLoadError = error?.message || 'Firebase connection failed'; window.renderEmergencyAlerts(); }); }); return; }
+        const filter = document.getElementById('emergency-alert-filter')?.value || 'active';
+        const filtered = rows.filter((item) => {
+            const status = String(item.status || 'reported');
+            if (filter === 'active') return emergencyIsActive(item);
+            if (filter === 'unverified') return emergencyIsActive(item) && String(item.verificationStatus || 'unverified') === 'unverified';
+            if (filter === 'responding') return status === 'responding';
+            if (filter === 'resolved') return status === 'resolved';
+            if (filter === 'cancelled') return status === 'cancelled' || item.verificationStatus === 'rejected';
+            return true;
+        });
+        if (!filtered.length) { list.innerHTML = '<p class="rounded-xl bg-white p-8 text-center text-gray-500">এই filter-এ কোনো জরুরি alert নেই।</p>'; return; }
+        list.innerHTML = filtered.map((item) => {
+            const id = String(item.id);
+            const status = String(item.status || 'reported');
+            const verification = String(item.verificationStatus || 'unverified');
+            const privateData = emergencyPrivateDetails.get(id);
+            const privateError = emergencyPrivateErrors.get(id);
+            const isLoadingPrivate = emergencyPrivateLoading.has(id);
+            const timestamp = Number(item.timestamp);
+            const timeLabel = Number.isFinite(timestamp) && timestamp > 0 ? new Date(timestamp).toLocaleString() : 'সময় পাওয়া যায়নি';
+            const detailBlock = privateData ? (() => {
+                const phone = String(privateData.contact || '').replace(/[^0-9+]/g, '');
+                const lat = Number(privateData.latitude), lng = Number(privateData.longitude);
+                const hasMap = Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+                return `<div class="mt-3 rounded-lg border border-blue-100 bg-blue-50 p-3 text-xs text-blue-900"><p><b>আবেদনকারী:</b> ${escapeHTML(privateData.authorName || 'কমিউনিটি সদস্য')} · <b>আক্রান্ত:</b> ${escapeHTML(privateData.affectedCount || 'উল্লেখ নেই')}</p><div class="mt-2 flex flex-wrap gap-3">${phone ? `<a class="font-bold text-blue-700 underline" href="tel:${escapeHTML(phone)}"><i class="fa-solid fa-phone mr-1"></i>${escapeHTML(phone)}-এ কল</a>` : '<span>ফোন নম্বর দেওয়া হয়নি</span>'}${hasMap ? `<a class="font-bold text-blue-700 underline" target="_blank" rel="noopener noreferrer" href="https://www.google.com/maps/search/?api=1&amp;query=${encodeURIComponent(`${lat},${lng}`)}"><i class="fa-solid fa-map-location-dot mr-1"></i>GPS map</a>` : ''}</div></div>`;
+            })() : `<div class="mt-3">${privateError ? `<p class="mb-2 text-xs text-amber-700">${escapeHTML(privateError)}</p>` : ''}<button type="button" data-emergency-private="${escapeHTML(id)}" class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-800" ${isLoadingPrivate ? 'disabled' : ''}>${isLoadingPrivate ? 'ব্যক্তিগত তথ্য লোড হচ্ছে…' : privateError ? 'আবার চেষ্টা করুন' : 'প্রয়োজনে ব্যক্তিগত যোগাযোগের তথ্য দেখুন'}</button></div>`;
+            const actionButton = (action, label, color) => `<button type="button" data-emergency-action="${action}" data-alert-id="${escapeHTML(id)}" class="rounded-lg ${color} px-3 py-2 text-xs font-bold text-white">${label}</button>`;
+            const actions = [];
+            if (verification === 'unverified') { actions.push(actionButton('verify', 'যাচাই করুন', 'bg-emerald-700 hover:bg-emerald-800')); actions.push(actionButton('reject', 'মিথ্যা/অনুপযুক্ত — বাতিল', 'bg-rose-700 hover:bg-rose-800')); }
+            if (status === 'reported') actions.push(actionButton('responding', 'সাড়া দেওয়া শুরু', 'bg-blue-700 hover:bg-blue-800'));
+            if (status === 'responding') actions.push(actionButton('resolved', 'সমাধান হয়েছে', 'bg-emerald-700 hover:bg-emerald-800'));
+            if (['reported', 'responding'].includes(status)) actions.push(actionButton('cancelled', 'Alert বাতিল', 'bg-slate-700 hover:bg-slate-800'));
+            if (status === 'resolved' || status === 'cancelled') actions.push(actionButton('reopen', verification === 'rejected' ? 'আবার যাচাইয়ে নিন' : 'আবার চালু', 'bg-amber-700 hover:bg-amber-800'));
+            return `<article class="rounded-xl border border-red-100 border-l-4 border-l-red-500 bg-white p-4 shadow-sm"><div class="flex flex-wrap items-start justify-between gap-3"><div class="min-w-0 flex-1"><div class="mb-2 flex flex-wrap items-center gap-2"><span class="rounded-full bg-red-100 px-2 py-1 text-[10px] font-bold uppercase text-red-800">${escapeHTML(item.typeLabel || item.type || 'জরুরি alert')}</span><span class="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-700">${escapeHTML(item.severity || 'severity নেই')}</span><span class="rounded-full bg-blue-50 px-2 py-1 text-[10px] font-bold text-blue-800">${escapeHTML(emergencyVerificationLabel(verification))}</span><span class="rounded-full bg-gray-100 px-2 py-1 text-[10px] font-bold text-gray-700">${escapeHTML(emergencyStatusLabel(status))}</span></div><p class="text-[11px] text-gray-500">${escapeHTML(timeLabel)} · Alert ID: ${escapeHTML(id)} · Reporter UID: ${escapeHTML(item.uid || 'নেই')}</p><h3 class="mt-2 text-base font-extrabold text-gray-900">${escapeHTML(item.title || 'শিরোনাম নেই')}</h3><p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-gray-700">${escapeHTML(item.desc || 'বিস্তারিত নেই')}</p><p class="mt-2 text-xs text-gray-600"><b>এলাকা:</b> ${escapeHTML([item.location, item.landmark].filter(Boolean).join(' · ') || 'উল্লেখ নেই')}</p>${item.updatedAt ? `<p class="mt-1 text-[10px] text-gray-400">সর্বশেষ সিদ্ধান্ত: ${escapeHTML(new Date(Number(item.updatedAt)).toLocaleString())}</p>` : ''}${detailBlock}<div class="mt-3 flex flex-wrap gap-2">${actions.join('')}</div></div></div></article>`;
+        }).join('');
+        bindEmergencyButtons();
+    };
+    window.loadEmergencyPrivateDetails = async (rawId) => {
+        const id = String(rawId || '');
+        if (!/^[A-Za-z0-9_-]{1,128}$/.test(id) || emergencyPrivateLoading.has(id)) return;
+        emergencyPrivateLoading.add(id); emergencyPrivateErrors.delete(id); window.renderEmergencyAlerts();
+        try {
+            const snapshot = await get(ref(db, `emergency_alert_private/${id}`));
+            if (!snapshot.exists()) { emergencyPrivateDetails.set(id, null); emergencyPrivateErrors.set(id, 'এই alert-এর ব্যক্তিগত তথ্য সংরক্ষিত নেই।'); }
+            else { emergencyPrivateDetails.set(id, snapshot.val() || {}); emergencyPrivateErrors.delete(id); }
+        } catch (error) { emergencyPrivateErrors.set(id, error?.code === 'PERMISSION_DENIED' ? 'Private তথ্য পড়ার অনুমতি নেই। Admin claim ও emergency_alert_private rules পরীক্ষা করুন।' : 'Private তথ্য লোড হয়নি। সংযোগ ও Firebase Rules পরীক্ষা করে আবার চেষ্টা করুন।'); }
+        finally { emergencyPrivateLoading.delete(id); window.renderEmergencyAlerts(); }
+    };
+    window.handleEmergencyAction = async (rawId, action) => {
+        const id = String(rawId || '');
+        if (!/^[A-Za-z0-9_-]{1,128}$/.test(id)) { alert('Alert ID সঠিক নয়। তালিকা refresh করুন।'); return; }
+        const current = emergencyAlerts[id];
+        if (!current || typeof current !== 'object') { alert('Alert পাওয়া যায়নি। তালিকা refresh করুন।'); return; }
+        const user = auth.currentUser;
+        if (!user) { alert('Admin session পাওয়া যায়নি।'); return; }
+        try {
+            const token = await user.getIdTokenResult();
+            if (token.claims.admin !== true) throw new Error('Firebase admin custom claim যাচাই হয়নি।');
+            const latestSnapshot = await get(ref(db, `emergency_alerts/${id}`));
+            const latest = latestSnapshot.val();
+            if (!latest) throw new Error('Alert আর নেই; তালিকা refresh করুন।');
+            if (String(latest.status || 'reported') !== String(current.status || 'reported') || String(latest.verificationStatus || 'unverified') !== String(current.verificationStatus || 'unverified') || Number(latest.updatedAt || 0) !== Number(current.updatedAt || 0)) throw new Error('অন্য Admin ইতিমধ্যে alert আপডেট করেছেন। সর্বশেষ তথ্য দেখতে তালিকা refresh করুন।');
+            const patch = {};
+            const defaultReasons = { verify: 'Emergency report verified', reject: 'Emergency report rejected as invalid/unsuitable', responding: 'Admin/coordinator started response', resolved: 'Emergency report resolved', cancelled: 'Emergency report cancelled', reopen: 'Emergency report reopened' };
+            if (action === 'verify') patch.verificationStatus = 'verified';
+            else if (action === 'reject') { patch.verificationStatus = 'rejected'; patch.status = 'cancelled'; }
+            else if (['responding', 'resolved', 'cancelled'].includes(action)) patch.status = action;
+            else if (action === 'reopen') { patch.status = String(current.status || 'reported') === 'cancelled' ? 'reported' : 'responding'; if (current.verificationStatus === 'rejected') patch.verificationStatus = 'unverified'; }
+            else throw new Error('এই alert action সমর্থিত নয়।');
+            const oldStatus = String(current.status || 'reported');
+            const nextStatus = patch.status || oldStatus;
+            const allowedTransitions = { reported: ['responding', 'resolved', 'cancelled'], responding: ['reported', 'resolved', 'cancelled'], resolved: ['responding', 'cancelled'], cancelled: ['reported'] };
+            if (nextStatus !== oldStatus && !(allowedTransitions[oldStatus] || []).includes(nextStatus)) throw new Error('এই status পরিবর্তন অনুমোদিত নয়।');
+            const reasonInput = window.prompt('সিদ্ধান্তের কারণ লিখুন; এটি Admin audit log-এ থাকবে। যোগাযোগ/ব্যক্তিগত তথ্য লিখবেন না।', defaultReasons[action]);
+            if (reasonInput === null) return;
+            const reason = String(reasonInput).trim().slice(0, 300) || defaultReasons[action];
+            if (!window.confirm(`${emergencyStatusLabel(nextStatus)} / ${emergencyVerificationLabel(patch.verificationStatus || current.verificationStatus || 'unverified')} হিসেবে সংরক্ষণ করবেন?`)) return;
+            const timestamp = Date.now();
+            const auditRef = push(ref(db, 'super_admin_audit'));
+            if (!auditRef.key) throw new Error('Audit event ID তৈরি করা যায়নি।');
+            const before = { status: oldStatus, verificationStatus: String(current.verificationStatus || 'unverified'), updatedAt: Number(current.updatedAt || 0) };
+            const after = { ...before, ...patch, updatedAt: timestamp, updatedBy: user.uid };
+            const updates = {};
+            Object.entries({ ...patch, updatedAt: timestamp, updatedBy: user.uid }).forEach(([key, value]) => { updates[`emergency_alerts/${id}/${key}`] = value; });
+            updates[`super_admin_audit/${auditRef.key}`] = { actorUid: user.uid, action: `emergency_alert_${action}`, target: `emergency_alerts/${id}`, before: JSON.stringify(before).slice(0, 3900), after: JSON.stringify(after).slice(0, 3900), reason, requestId: `emergency-ui-${auditRef.key}`, timestamp, result: 'success' };
+            await update(ref(db), updates);
+        } catch (error) { alert(`জরুরি alert আপডেট হয়নি: ${error?.message || 'Firebase Rules/connection পরীক্ষা করুন।'}`); }
+    };
     window.loadAdminOperationalData = () => {
         if (!auth.currentUser) return;
         window.loadBloodOperatorApplications();
