@@ -127,6 +127,7 @@
             <div onclick="switchTab('complaints')" id="menu-complaints" class="sidebar-item p-3 cursor-pointer flex items-center gap-3"><i class="fa-solid fa-inbox w-5 text-center"></i><span class="menu-text">নাগরিক অভিযোগ</span></div>
             <div onclick="switchTab('services')" id="menu-services" class="sidebar-item p-3 cursor-pointer flex items-center gap-3"><i class="fa-solid fa-layer-group w-5 text-center"></i><span class="menu-text">পর্যটন ও শিক্ষা</span></div>
             <div onclick="switchTab('transport')" id="menu-transport" class="sidebar-item p-3 cursor-pointer flex items-center gap-3"><i class="fa-solid fa-bus w-5 text-center"></i><span class="menu-text">পরিবহন</span></div>
+            <div onclick="switchTab('community-submissions')" id="menu-community-submissions" class="sidebar-item p-3 cursor-pointer flex items-center gap-3 relative"><i class="fa-solid fa-clipboard-check w-5 text-center"></i><span class="menu-text">পর্যটন/পরিবহন আবেদন</span><span id="badge-community-submissions" class="hidden absolute right-2 bg-red-500 text-white text-[10px] px-1.5 rounded-full">0</span></div>
             <p class="section-title text-xs font-bold text-gray-400 mt-5 mb-2 uppercase px-3">কনফিগারেশন</p>
             <div onclick="switchTab('locations')" id="menu-locations" class="sidebar-item p-3 cursor-pointer flex items-center gap-3"><i class="fa-solid fa-map w-5 text-center"></i><span class="menu-text">এলাকা সেটআপ</span></div>
             <div onclick="switchTab('settings')" id="menu-settings" class="sidebar-item p-3 cursor-pointer flex items-center gap-3"><i class="fa-solid fa-gear w-5 text-center"></i><span class="menu-text">সেটিংস ও নিয়ন্ত্রণ</span></div>
@@ -296,6 +297,28 @@
                     <button onclick="addBusService()" id="btn-add-bus" class="mt-4 bg-green-600 text-white px-6 py-2 rounded-lg font-bold">সেভ করুন</button>
                 </div>
                 <div id="list-trans-bus" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </div>
+        </div>
+
+        <!-- COMMUNITY TOURISM AND TRANSPORT SUBMISSIONS -->
+        <div id="tab-community-submissions" class="hidden-custom space-y-6">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800">পর্যটন ও পরিবহন তথ্য যাচাই</h2>
+                <p class="mt-2 max-w-4xl rounded-xl border border-blue-100 bg-blue-50 p-3 text-sm leading-6 text-blue-900">ইউজারের জমা দেওয়া পর্যটন প্রস্তাব, পরিবহন provider application এবং পরিবহন অনুরোধ এখানে দেখুন। অনুমোদিত Tourism তথ্য ও provider listing-ই কেবল Native App-এর public directory-তে যোগ হবে; আবেদন ও সিদ্ধান্ত audit log-এ সংরক্ষিত থাকবে।</p>
+            </div>
+            <div class="grid grid-cols-1 gap-5 2xl:grid-cols-3">
+                <section class="min-w-0 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                    <div class="mb-3 flex items-center justify-between gap-2"><div><h3 class="font-bold text-gray-900">পর্যটন প্রস্তাব / সংশোধন</h3><p class="mt-1 text-xs text-gray-500">অনুমোদনে curated Tourism তালিকায় যাবে</p></div><span id="count-tourism-submissions" class="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-bold text-violet-800">0 অপেক্ষমাণ</span></div>
+                    <div id="list-tourism-submissions" class="space-y-3"></div>
+                </section>
+                <section class="min-w-0 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                    <div class="mb-3 flex items-center justify-between gap-2"><div><h3 class="font-bold text-gray-900">পরিবহন provider আবেদন</h3><p class="mt-1 text-xs text-gray-500">অনুমোদনে সংশ্লিষ্ট transport directory-তে যুক্ত হবে</p></div><span id="count-transport-provider-submissions" class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800">0 অপেক্ষমাণ</span></div>
+                    <div id="list-transport-provider-submissions" class="space-y-3"></div>
+                </section>
+                <section class="min-w-0 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                    <div class="mb-3 flex items-center justify-between gap-2"><div><h3 class="font-bold text-gray-900">পরিবহন অনুরোধ</h3><p class="mt-1 text-xs text-gray-500">এগুলো request—provider directory-তে স্বয়ংক্রিয়ভাবে যোগ হবে না</p></div><span id="count-transport-requests" class="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800">0 অপেক্ষমাণ</span></div>
+                    <div id="list-transport-requests" class="space-y-3"></div>
+                </section>
             </div>
         </div>
 
@@ -1009,6 +1032,7 @@
     import { getDatabase, ref, push, set, onValue, get, update, remove, query, orderByKey, limitToFirst, limitToLast, startAfter, endBefore, orderByChild, equalTo, runTransaction, endAt } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
+    import { createCommunitySubmissionAdmin } from "./service-submissions.js";
 
     // Cloudinary media deletion must run on a trusted server; never place API secrets in this public browser app.
     const firebaseConfig = {
@@ -1028,6 +1052,7 @@
     const purgeUserAccount = httpsCallable(functions, 'purgeUserAccount');
     const purgeTrashPost = httpsCallable(functions, 'purgeTrashPost');
     const restoreTrashPost = httpsCallable(functions, 'restoreTrashPost');
+    const communitySubmissionAdmin = createCommunitySubmissionAdmin({ db, auth, ref, push, get, update, onValue, query, orderByChild, limitToLast });
 
     let allComplaints =[];
     let emergencyAlerts = {};
@@ -1290,6 +1315,7 @@
 
     function loadData() {
         loadRecentActivity();
+        communitySubmissionAdmin.start();
 
         // LOCATIONS
         onValue(ref(db, 'locations'), (snap) => {
@@ -3583,7 +3609,7 @@
 <script>
     function switchTab(id) {
         // নতুন 'tracking' ট্যাব যুক্ত করা হলো
-        const tabs = ['dashboard','locations','services','notices','directory','users','posts','complaints','market','orders','feedback','stories','finance','audit','blood','verification','reports','settings','emergency','transport','outside-nid','account-delete','trash'];
+        const tabs = ['dashboard','locations','services','notices','directory','users','posts','complaints','market','orders','feedback','stories','finance','audit','blood','verification','reports','settings','emergency','transport','community-submissions','outside-nid','account-delete','trash'];
         tabs.forEach(t => {
             const el = document.getElementById('tab-'+t);
             const menu = document.getElementById('menu-'+t);

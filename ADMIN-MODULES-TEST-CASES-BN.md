@@ -35,7 +35,7 @@ Firebase Console-এ Rules কপি করার আগে emulator-এ চা�
 |---|---|---|---|
 | SM-01 | Admin login | Admin email/password দিয়ে login করুন | Dashboard খুলবে; login overlay চলে যাবে |
 | SM-02 | Non-admin login | সাধারণ user দিয়ে login করুন | Admin claim না থাকায় Panel access বন্ধ হবে |
-| SM-03 | Sidebar navigation | Orders, Feedback, Stories, Finance, Audit এবং Blood Service → Operator আবেদন menu একে একে চাপুন | প্রতিটি tab খুলবে; অন্য tab hidden থাকবে; pending operator application badge-এ দেখা যাবে |
+| SM-03 | Sidebar navigation | Orders, Feedback, Stories, Finance, Audit, Blood Service → Operator আবেদন এবং পর্যটন/পরিবহন আবেদন menu একে একে চাপুন | প্রতিটি tab খুলবে; অন্য tab hidden থাকবে; সংশ্লিষ্ট pending badge দেখা যাবে |
 | SM-04 | Refresh persistence | Admin login-এর পর browser refresh করুন | Firebase Auth session থাকলে Panel আবার খুলবে |
 | SM-05 | Mobile layout | 360–430px viewport-এ menu খুলুন | Sidebar overlay, tab content এবং buttons কাটা যাবে না |
 | SM-06 | Empty state | কোনো test data না রেখে নতুন tab খুলুন | “কোনো record পাওয়া যায়নি” ধরনের safe empty state দেখাবে |
@@ -165,7 +165,7 @@ python3 -m json.tool database.rules.json >/dev/null
 pnpm test:rules
 ```
 
-বর্তমান baseline হিসেবে Rules suite-এ ২২টি test file এবং ১৩৬টি test pass করেছে। নতুন order Admin permission-এর জন্য আলাদা test যোগ করা হলে অন্তত এগুলো আবশ্যক:
+সর্বশেষ যাচাইকৃত baseline হিসেবে Rules suite-এ ২৩টি test file এবং ১৪৩টি test pass করেছে। নতুন order Admin permission-এর জন্য আলাদা test যোগ করা হলে অন্তত এগুলো আবশ্যক:
 
 ```text
 admin can read market_orders root
@@ -228,3 +228,33 @@ Navigation: **Sidebar → জরুরি এলার্ট**. Emergency contac
 | SOS-14 | Public privacy/deletion | নিজের public test alert-এ `phone`, `phoneNumber`, `requesterName`, `email`, `gps` বা `coordinates` field যোগের চেষ্টা করুন; বিদ্যমান alert delete-ও চেষ্টা করুন | sensitive aliases validation-এ reject হবে এবং alert record delete হবে না |
 
 **Deployment note:** Admin UI push এবং Firebase RTDB Rules deployment আলাদা। Rules update-এর আগে live Rules-এর পূর্ণ backup নিন; repo-এর `database.rules.json`-এর সঙ্গে diff/merge করে emergency lifecycle, privacy ও actor/time clauses যাচাই করুন, তারপর Emulator suite চালিয়ে publish করুন। RTDB Rules sibling-path audit event enforce করতে পারে না; direct Admin SDK update এড়িয়ে শুধু audited Admin Panel action ব্যবহার করুন। Browser/OS push notification এখানে নেই; real-time Admin queue দেখতে panel খোলা থাকতে হবে।
+
+
+## পর্যটন ও পরিবহন কমিউনিটি আবেদন — Admin smoke tests
+
+Admin Panel path: **Sidebar → পর্যটন/পরিবহন আবেদন**. এই UI কেবল Firebase Auth custom claim `{ "admin": true }` থাকা Admin-দের জন্য। Rules update না থাকলে UI-তে permission/error state দেখাতে হবে—খালি সফল queue হিসেবে নয়।
+
+| ID | Test | ধাপ | Expected result |
+|---|---|---|---|
+| COMMUNITY-01 | Navigation ও tabs | Admin login করে পর্যটন/পরিবহন আবেদন খুলুন; তিনটি tab বদলান | Tourism contribution, Transport provider application এবং Transport request আলাদা tab-এ দেখা যায়; pending count/tab status সঠিক |
+| COMMUNITY-02 | Pending queue | Native app-এ authenticated test user দিয়ে Tourism suggestion, provider application ও generic transport request জমা দিন | Real-time Admin queue-তে তিনটি record-ই সঠিক queue-তে আসে; contributor, details, submitted time/status দেখা যায় |
+| COMMUNITY-03 | Tourism suggestion approval | Pending suggestion-এর title/category/details/location/images যাচাই করে approve করুন | Request approved + reviewed actor/time; `/services/data/history_tourism/community-{requestId}`-এ user-app Tourism parser-সমর্থিত fields, `is_verified`, `images` লেখা; audit event একই atomic update-এ থাকে |
+| COMMUNITY-04 | Tourism correction | বিদ্যমান `placeId`-সহ correction approve করুন | Existing tourism record update হয়; request-এর path/id বা অন্য place পরিবর্তিত হয় না; verified/catalog metadata ও audit লেখা হয় |
+| COMMUNITY-05 | Tourism review | Existing place-এর 1–5-star review জমা দিয়ে approve করুন | একই place-এর `approvedReviews`-এ review যোগ হয়; `reviewCount` ও `averageRating` পুনর্গণনা হয়; Native App parser review দেখায় |
+| COMMUNITY-06 | Tourism report | ভুল তথ্য report করে Admin-কে review করতে দিন | Approve action report-কে resolved করে; নতুন Tourism place বা public review তৈরি করে না |
+| COMMUNITY-07 | Tourism rejection | Suggestion, correction, review ও report reject করুন | Request rejected ও audit-এ reason/actor/time থাকে; suggestion/review/correction public catalog-এ প্রকাশ পায় না |
+| COMMUNITY-08 | Provider approval | CNG, auto-rickshaw, motorcycle, rent-a-car বা bus-এর provider application approve করুন | Request approved; কেবল সংশ্লিষ্ট `/transport/{providerType}/provider-{requestId}`-এ app-parser-সমর্থিত public record তৈরি; approved record-এ provider contact দেখা যায় |
+| COMMUNITY-09 | Provider rejection | Provider application reject করুন | Rejected request ও audit থাকে; `transport/{type}` directory-তে কোনো listing যোগ হয় না |
+| COMMUNITY-10 | Generic transport request | Generic transport request approve/resolved এবং reject করে দেখুন | Status/audit update হয়; এটি provider application নয় বলে transport provider directory-তে promote হয় না |
+| COMMUNITY-11 | Private pending data | Pending provider request review করুন; unauthenticated/non-admin user দিয়ে queue read চেষ্টা করুন | Phone/WhatsApp শুধু authorized Admin queue-তে থাকে; anonymous/non-admin read Rules-এ `permission_denied` হয় |
+| COMMUNITY-12 | Stale action | প্রথম Admin সিদ্ধান্ত সংরক্ষণের পরে পুরোনো pending card থেকে বিপরীত সিদ্ধান্ত দিন | Fresh read-এ request আর pending না থাকলে action থামে; দ্বিতীয় সিদ্ধান্ত সফল বলে দেখানো হয় না |
+| COMMUNITY-13 | Rules not deployed | Production Rules-নতুন হয়নি এমন test environment-এ queue load/write করুন | Permission denied/clear retry message; record approval হয়েছে বলে দেখানো হবে না |
+| COMMUNITY-14 | Narrow viewport | 360–430px viewport-এ তিনটি queue, long text এবং action buttons দেখুন | Navigation/card/action ব্যবহারযোগ্য; user text escaped, screen-এ horizontal overflow নয় |
+
+### Security/deployment checklist
+
+- Emulator-এ Rules tests চালিয়ে Tourism request types, `images: []`, hosted image validation, owner-only pending submission, Admin-only read/review, provider field/type validation এবং `publicRecordId`/audit atomic update যাচাই করুন।
+- UI authorization-কে একমাত্র নিরাপত্তা ধরে নেবেন না; production Firebase RTDB Rules-এ `auth.token.admin === true` custom claim ও প্রত্যেক source/destination path-এর read/write restriction থাকা আবশ্যক।
+- `database.rules.json`-এর পরিবর্তন GitHub-এ থাকলেও live Firebase Rules স্বয়ংক্রিয়ভাবে deploy হয় না। আগে live rules backup করুন, repository rules-এর সঙ্গে merge/diff করে emulator test চালান, তারপর Firebase Console-এ manually publish করুন।
+- Public directory promotion করলে contact data user-visible হবে—approval-এর আগে user consent/contact disclosure ও listing-এর সঠিকতা যাচাই করুন।
+- Admin Panel-এ **পর্যটন/পরিবহন আবেদন**-ই user submissions-এর review location; existing **পর্যটন/পরিবহন** management tabs curated public catalogue/configuration পরিচালনা করে।
